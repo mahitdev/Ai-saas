@@ -33,14 +33,14 @@ export default function Home() {
       <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col justify-center gap-8 p-6 md:p-10">
         <div className="space-y-4 text-center md:text-left">
           <Badge variant="secondary" className="px-3 py-1 text-xs">
-            Secure AI SaaS Workspace
+            Secure AI Chat With Memory
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-6xl">
-            Build, track, and ship
-            <span className="block text-sky-700">in one protected dashboard</span>
+            Chat, talk, and remember
+            <span className="block text-sky-700">with your personal AI assistant</span>
           </h1>
           <p className="mx-auto max-w-2xl text-base text-slate-600 md:mx-0 md:text-lg">
-            A secure app foundation with authenticated APIs, task workflows, and an interactive project workspace.
+            Sign in to your protected AI chat workspace with persistent conversation memory and voice interaction.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
             <Button asChild size="lg">
@@ -70,15 +70,15 @@ export default function Home() {
           <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
             <CardContent className="space-y-2 p-5">
               <Bot className="size-5 text-sky-600" />
-              <p className="font-semibold">Interactive Workspace</p>
-              <p className="text-sm text-muted-foreground">Create projects, manage tasks, filter and track progress.</p>
+              <p className="font-semibold">Voice + Text Chat</p>
+              <p className="text-sm text-muted-foreground">Talk to your AI with speech input and voice responses.</p>
             </CardContent>
           </Card>
           <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
             <CardContent className="space-y-2 p-5">
               <Rocket className="size-5 text-orange-600" />
-              <p className="font-semibold">Production Ready</p>
-              <p className="text-sm text-muted-foreground">Structured backend with clean Next.js + Drizzle architecture.</p>
+              <p className="font-semibold">Memory Conversations</p>
+              <p className="text-sm text-muted-foreground">Your chats persist and the assistant remembers context.</p>
             </CardContent>
           </Card>
         </div>

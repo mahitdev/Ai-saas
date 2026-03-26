@@ -76,7 +76,32 @@ const statements = [
   `ALTER TABLE project_task ADD COLUMN IF NOT EXISTS priority task_priority NOT NULL DEFAULT 'medium';`,
   `ALTER TABLE project_task ADD COLUMN IF NOT EXISTS starred boolean NOT NULL DEFAULT false;`,
   `CREATE INDEX IF NOT EXISTS project_task_projectId_idx ON project_task(project_id);`,
-  `CREATE INDEX IF NOT EXISTS project_task_ownerId_idx ON project_task(owner_id);`
+  `CREATE INDEX IF NOT EXISTS project_task_ownerId_idx ON project_task(owner_id);`,
+  `CREATE TABLE IF NOT EXISTS ai_conversation (
+    id text PRIMARY KEY,
+    user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  );`,
+  `CREATE INDEX IF NOT EXISTS ai_conversation_userId_idx ON ai_conversation(user_id);`,
+  `CREATE TABLE IF NOT EXISTS ai_message (
+    id text PRIMARY KEY,
+    conversation_id text NOT NULL REFERENCES ai_conversation(id) ON DELETE CASCADE,
+    user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+    role text NOT NULL,
+    content text NOT NULL,
+    created_at timestamp NOT NULL DEFAULT now()
+  );`,
+  `CREATE INDEX IF NOT EXISTS ai_message_conversationId_idx ON ai_message(conversation_id);`,
+  `CREATE INDEX IF NOT EXISTS ai_message_userId_idx ON ai_message(user_id);`,
+  `CREATE TABLE IF NOT EXISTS ai_memory (
+    id text PRIMARY KEY,
+    user_id text NOT NULL UNIQUE REFERENCES "user"(id) ON DELETE CASCADE,
+    summary text NOT NULL DEFAULT '',
+    updated_at timestamp NOT NULL DEFAULT now()
+  );`,
+  `CREATE INDEX IF NOT EXISTS ai_memory_userId_idx ON ai_memory(user_id);`
 ];
 
 (async () => {

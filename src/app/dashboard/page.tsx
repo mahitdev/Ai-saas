@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { SecuredDashboard } from "@/components/dashboard/secured-dashboard";
+import { AiChatDashboard } from "@/components/chat/ai-chat-dashboard";
 import { getServerSession } from "@/lib/server/session";
 
 export default async function DashboardPage() {
@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <SecuredDashboard
+    <AiChatDashboard
       user={{
         id: session.user.id,
         name: session.user.name,

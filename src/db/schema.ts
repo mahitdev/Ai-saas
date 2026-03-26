@@ -132,3 +132,57 @@ export const projectTask = pgTable(
     index("project_task_ownerId_idx").on(table.ownerId),
   ],
 );
+
+export const aiConversation = pgTable(
+  "ai_conversation",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("ai_conversation_userId_idx").on(table.userId)],
+);
+
+export const aiMessage = pgTable(
+  "ai_message",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => aiConversation.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("ai_message_conversationId_idx").on(table.conversationId),
+    index("ai_message_userId_idx").on(table.userId),
+  ],
+);
+
+export const aiMemory = pgTable(
+  "ai_memory",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    summary: text("summary").notNull().default(""),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("ai_memory_userId_idx").on(table.userId)],
+);
