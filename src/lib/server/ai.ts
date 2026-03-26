@@ -98,6 +98,29 @@ function extractGeminiText(payload: unknown) {
   return "";
 }
 
+async function listGeminiGenerateModels(apiKey: string) {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "GET",
+        headers: { "content-type": "application/json" },
+      },
+    );
+    if (!response.ok) {
+      return [];
+    }
+    const payload = (await response.json()) as {
+      models?: Array<{ name?: string; supportedGenerationMethods?: string[] }>;
+    };
+    return (payload.models ?? [])
+      .filter((model) => model.name && model.supportedGenerationMethods?.includes("generateContent"))
+      .map((model) => model.name as string);
+  } catch {
+    return [];
+  }
+}
+
 export async function generateAssistantReply(params: {
   userId: string;
   userMessage: string;
@@ -131,13 +154,24 @@ export async function generateAssistantReply(params: {
     };
   }
 
-  const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+  const availableModels = await listGeminiGenerateModels(apiKey);
+  const preferred = [
+    "models/gemini-2.5-flash",
+    "models/gemini-2.0-flash",
+    "models/gemini-1.5-flash-latest",
+    "models/gemini-1.5-flash",
+  ];
+  const fallback = ["models/gemini-2.0-flash", "models/gemini-1.5-flash-latest"];
+  const models = (availableModels.length > 0
+    ? [...preferred.filter((name) => availableModels.includes(name)), ...availableModels]
+    : fallback
+  ).filter((value, index, array) => array.indexOf(value) === index);
   let lastError = "Unknown provider error";
 
   for (const model of models) {
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
         {
         method: "POST",
         headers: {
