@@ -122,7 +122,9 @@ export async function generateAssistantReply(params: {
     .reverse()
     .map((row) => ({ role: row.role as "user" | "assistant", content: row.content }));
 
-  if (!env.OPENAI_API_KEY) {
+  const apiKey = env.OPENAI_API_KEY?.trim();
+
+  if (!apiKey) {
     return {
       reply:
         "OPENAI_API_KEY is not configured for this deployment yet. Add it in Vercel Environment Variables and redeploy.",
@@ -130,47 +132,56 @@ export async function generateAssistantReply(params: {
     };
   }
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input: [
-          {
-            role: "system",
-            content:
-              "You are a warm AI assistant in a personal chat app. Be concise, helpful, and remember user context.",
-          },
-          ...(memorySummary
-            ? [{ role: "system", content: `User memory:\n${memorySummary}` }]
-            : []),
-          ...history,
-          { role: "user", content: userMessage },
-        ],
-      }),
-    });
+  const models = ["gpt-4o-mini", "gpt-4.1-mini"];
+  let lastError = "Unknown provider error";
 
-    if (!response.ok) {
-      throw new Error(`Model request failed: ${response.status}`);
+  for (const model of models) {
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          input: [
+            {
+              role: "system",
+              content:
+                "You are a warm AI assistant in a personal chat app. Be concise, helpful, and remember user context.",
+            },
+            ...(memorySummary
+              ? [{ role: "system", content: `User memory:\n${memorySummary}` }]
+              : []),
+            ...history,
+            { role: "user", content: userMessage },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        lastError = `Model ${model} failed (${response.status}). ${errorText}`.slice(0, 240);
+        continue;
+      }
+
+      const payload = await response.json();
+      const reply = extractModelText(payload);
+
+      if (!reply) {
+        lastError = `Model ${model} returned empty output`;
+        continue;
+      }
+
+      return { reply, memorySummary };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Request exception";
     }
-
-    const payload = await response.json();
-    const reply = extractModelText(payload);
-
-    if (!reply) {
-      throw new Error("Empty model reply");
-    }
-
-    return { reply, memorySummary };
-  } catch {
-    return {
-      reply:
-        "I couldn't reach the AI provider right now. Check OPENAI_API_KEY and model access, then try again.",
-      memorySummary,
-    };
   }
+
+  return {
+    reply: `I couldn't reach the AI provider right now. ${lastError}`,
+    memorySummary,
+  };
 }
