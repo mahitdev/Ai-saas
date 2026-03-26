@@ -5,6 +5,7 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(1),
   BETTER_AUTH_URL: z.url(),
   ALLOWED_ORIGINS: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
 });
 
@@ -13,5 +14,6 @@ export const env = envSchema.parse({
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 });

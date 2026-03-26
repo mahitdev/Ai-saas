@@ -62,30 +62,29 @@ export async function updateUserMemory(userId: string, userMessage: string) {
   return summary;
 }
 
-function extractModelText(payload: unknown) {
+function extractGeminiText(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return "";
   }
 
-  const direct = (payload as { output_text?: unknown }).output_text;
-  if (typeof direct === "string" && direct.trim()) {
-    return direct.trim();
-  }
-
-  const output = (payload as { output?: unknown }).output;
-  if (!Array.isArray(output)) {
+  const candidates = (payload as { candidates?: unknown }).candidates;
+  if (!Array.isArray(candidates)) {
     return "";
   }
 
-  for (const item of output) {
-    if (!item || typeof item !== "object") {
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object") {
       continue;
     }
-    const content = (item as { content?: unknown }).content;
-    if (!Array.isArray(content)) {
+    const content = (candidate as { content?: unknown }).content;
+    if (!content || typeof content !== "object") {
       continue;
     }
-    for (const part of content) {
+    const parts = (content as { parts?: unknown }).parts;
+    if (!Array.isArray(parts)) {
+      continue;
+    }
+    for (const part of parts) {
       if (!part || typeof part !== "object") {
         continue;
       }
@@ -122,43 +121,51 @@ export async function generateAssistantReply(params: {
     .reverse()
     .map((row) => ({ role: row.role as "user" | "assistant", content: row.content }));
 
-  const apiKey = env.OPENAI_API_KEY?.trim();
+  const apiKey = env.GEMINI_API_KEY?.trim();
 
   if (!apiKey) {
     return {
       reply:
-        "OPENAI_API_KEY is not configured for this deployment yet. Add it in Vercel Environment Variables and redeploy.",
+        "GEMINI_API_KEY is not configured for this deployment yet. Add it in Vercel Environment Variables and redeploy.",
       memorySummary,
     };
   }
 
-  const models = ["gpt-4o-mini", "gpt-4.1-mini"];
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
   let lastError = "Unknown provider error";
 
   for (const model of models) {
     try {
-      const response = await fetch("https://api.openai.com/v1/responses", {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model,
-          input: [
+          contents: [
             {
-              role: "system",
-              content:
-                "You are a warm AI assistant in a personal chat app. Be concise, helpful, and remember user context.",
+              role: "user",
+              parts: [
+                {
+                  text:
+                    "You are a warm AI assistant in a personal chat app. Be concise, helpful, and remember user context.",
+                },
+              ],
             },
             ...(memorySummary
-              ? [{ role: "system", content: `User memory:\n${memorySummary}` }]
+              ? [{ role: "user", parts: [{ text: `User memory:\n${memorySummary}` }] }]
               : []),
-            ...history,
-            { role: "user", content: userMessage },
+            ...history.map((item) => ({
+              role: item.role === "assistant" ? "model" : "user",
+              parts: [{ text: item.content }],
+            })),
+            { role: "user", parts: [{ text: userMessage }] },
           ],
         }),
-      });
+      },
+      );
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");
@@ -167,7 +174,7 @@ export async function generateAssistantReply(params: {
       }
 
       const payload = await response.json();
-      const reply = extractModelText(payload);
+      const reply = extractGeminiText(payload);
 
       if (!reply) {
         lastError = `Model ${model} returned empty output`;
