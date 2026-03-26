@@ -30,7 +30,7 @@ const Page = () => {
 
   useEffect(() => {
     if (session) {
-      router.replace("/");
+      router.replace("/dashboard");
     }
   }, [router, session]);
 
@@ -43,12 +43,12 @@ const Page = () => {
         name,
         email,
         password,
-        callbackURL: "/",
+        callbackURL: "/dashboard",
       },
       {
         onSuccess: () => {
           toast.success("Account created successfully.");
-          router.push("/");
+          router.push("/dashboard");
         },
         onError: (ctx) => {
           toast.error(ctx.error.message || "Unable to create account.");

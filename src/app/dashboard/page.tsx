@@ -1,0 +1,23 @@
+import { redirect } from "next/navigation";
+
+import { SecuredDashboard } from "@/components/dashboard/secured-dashboard";
+import { getServerSession } from "@/lib/server/session";
+
+export default async function DashboardPage() {
+  const session = await getServerSession();
+
+  if (!session?.user) {
+    redirect("/auth/sign-in");
+  }
+
+  return (
+    <SecuredDashboard
+      user={{
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        image: session.user.image,
+      }}
+    />
+  );
+}

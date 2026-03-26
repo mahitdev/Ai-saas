@@ -29,7 +29,7 @@ const Page = () => {
 
   useEffect(() => {
     if (session) {
-      router.replace("/");
+      router.replace("/dashboard");
     }
   }, [router, session]);
 
@@ -41,12 +41,12 @@ const Page = () => {
       {
         email,
         password,
-        callbackURL: "/",
+        callbackURL: "/dashboard",
       },
       {
         onSuccess: () => {
           toast.success("Signed in successfully.");
-          router.push("/");
+          router.push("/dashboard");
         },
         onError: (ctx) => {
           toast.error(ctx.error.message || "Unable to sign in.");

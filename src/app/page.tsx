@@ -1,142 +1,88 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { toast } from "sonner";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Bot, Lock, Rocket, ShieldCheck } from "lucide-react";
 
 import { authClient } from "@/lib/auth.client";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function Home() {
-  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
 
-  if (isSessionPending) {
+  useEffect(() => {
+    if (session?.user) {
+      router.replace("/dashboard");
+    }
+  }, [router, session]);
+
+  if (isPending) {
     return (
-      <main className="container mx-auto flex min-h-svh items-center justify-center px-4 py-10">
-        <Card className="w-full max-w-md">
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Loading your workspace...
-          </CardContent>
-        </Card>
-      </main>
-    );
-  }
-
-  if (session) {
-    const initials = session.user.name
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-
-    return (
-      <main className="container mx-auto flex min-h-svh items-center justify-center px-4 py-10">
-        <Card className="w-full max-w-xl">
-          <CardHeader>
-            <CardTitle>Dashboard</CardTitle>
-            <CardDescription>You are logged in with Better Auth.</CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-            <div className="flex items-center gap-3">
-              <Avatar className="size-10">
-                <AvatarImage src={session.user.image ?? undefined} alt={session.user.name} />
-                <AvatarFallback>{initials || "U"}</AvatarFallback>
-              </Avatar>
-
-              <div>
-                <p className="font-medium">{session.user.name}</p>
-                <p className="text-muted-foreground text-sm">{session.user.email}</p>
-              </div>
-            </div>
-
-            <Separator />
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">Sign out</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Sign out now?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    You will need to sign in again to access your account.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() =>
-                      authClient.signOut({
-                        fetchOptions: {
-                          onSuccess: () => {
-                            toast.success("Signed out.");
-                            window.location.assign("/");
-                          },
-                        },
-                      })
-                    }
-                  >
-                    Sign out
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
+      <main className="flex min-h-svh items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading workspace...</p>
       </main>
     );
   }
 
   return (
-    <main className="container mx-auto flex min-h-svh items-center justify-center px-4 py-10">
-      <Card className="w-full max-w-2xl overflow-hidden">
-        <CardContent className="grid gap-6 p-0 md:grid-cols-2">
-          <AspectRatio ratio={16 / 10} className="bg-muted">
-            <div className="from-primary/20 to-muted flex h-full w-full items-center justify-center bg-gradient-to-br">
-              <Image
-                src="/globe.svg"
-                alt="Auth illustration"
-                width={80}
-                height={80}
-                className="h-20 w-20 opacity-80"
-              />
-            </div>
-          </AspectRatio>
-
-          <div className="flex flex-col justify-center gap-4 p-6">
-            <CardTitle>AI Agent Platform</CardTitle>
-            <CardDescription>
-              Sign in to continue, or create an account to get started.
-            </CardDescription>
-
-            <div className="flex gap-3">
-              <Button asChild>
-                <Link href="/auth/sign-in">Sign in</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/auth/sign-up">Sign up</Link>
-              </Button>
-            </div>
+    <main className="relative min-h-svh overflow-hidden bg-[radial-gradient(circle_at_15%_10%,_rgba(37,99,235,0.22),_transparent_30%),radial-gradient(circle_at_85%_10%,_rgba(14,165,233,0.2),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)]">
+      <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col justify-center gap-8 p-6 md:p-10">
+        <div className="space-y-4 text-center md:text-left">
+          <Badge variant="secondary" className="px-3 py-1 text-xs">
+            Secure AI SaaS Workspace
+          </Badge>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-6xl">
+            Build, track, and ship
+            <span className="block text-sky-700">in one protected dashboard</span>
+          </h1>
+          <p className="mx-auto max-w-2xl text-base text-slate-600 md:mx-0 md:text-lg">
+            A secure app foundation with authenticated APIs, task workflows, and an interactive project workspace.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
+            <Button asChild size="lg">
+              <Link href="/auth/sign-up">Start Free</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <Link href="/auth/sign-in">Sign In</Link>
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
+            <CardContent className="space-y-2 p-5">
+              <ShieldCheck className="size-5 text-indigo-600" />
+              <p className="font-semibold">Auth-Protected API</p>
+              <p className="text-sm text-muted-foreground">Every data route requires a valid user session.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
+            <CardContent className="space-y-2 p-5">
+              <Lock className="size-5 text-emerald-600" />
+              <p className="font-semibold">Security Headers</p>
+              <p className="text-sm text-muted-foreground">CSP and browser hardening enabled at middleware level.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
+            <CardContent className="space-y-2 p-5">
+              <Bot className="size-5 text-sky-600" />
+              <p className="font-semibold">Interactive Workspace</p>
+              <p className="text-sm text-muted-foreground">Create projects, manage tasks, filter and track progress.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
+            <CardContent className="space-y-2 p-5">
+              <Rocket className="size-5 text-orange-600" />
+              <p className="font-semibold">Production Ready</p>
+              <p className="text-sm text-muted-foreground">Structured backend with clean Next.js + Drizzle architecture.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </main>
   );
 }
