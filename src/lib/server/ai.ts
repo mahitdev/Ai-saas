@@ -4,11 +4,6 @@ import { db } from "@/db";
 import { aiMemory, aiMessage } from "@/db/schema";
 import { env } from "@/lib/env";
 
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
-
 function extractFacts(input: string) {
   const lower = input.toLowerCase();
   const patterns = [
@@ -67,18 +62,41 @@ export async function updateUserMemory(userId: string, userMessage: string) {
   return summary;
 }
 
-function localFallbackReply(input: string, history: ChatMessage[], memory: string) {
-  const lastAssistant = [...history].reverse().find((item) => item.role === "assistant")?.content;
-  const memoryLine = memory ? `I remember: ${memory.split("\n").slice(-2).join(" | ")}.` : "";
+function extractModelText(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return "";
+  }
 
-  return [
-    "I heard you.",
-    `You said: "${input}"`,
-    memoryLine,
-    lastAssistant ? "I can continue from where we left off." : "Ask me anything and I will keep track of context.",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const direct = (payload as { output_text?: unknown }).output_text;
+  if (typeof direct === "string" && direct.trim()) {
+    return direct.trim();
+  }
+
+  const output = (payload as { output?: unknown }).output;
+  if (!Array.isArray(output)) {
+    return "";
+  }
+
+  for (const item of output) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+    const content = (item as { content?: unknown }).content;
+    if (!Array.isArray(content)) {
+      continue;
+    }
+    for (const part of content) {
+      if (!part || typeof part !== "object") {
+        continue;
+      }
+      const text = (part as { text?: unknown }).text;
+      if (typeof text === "string" && text.trim()) {
+        return text.trim();
+      }
+    }
+  }
+
+  return "";
 }
 
 export async function generateAssistantReply(params: {
@@ -106,7 +124,8 @@ export async function generateAssistantReply(params: {
 
   if (!env.OPENAI_API_KEY) {
     return {
-      reply: localFallbackReply(userMessage, history, memorySummary),
+      reply:
+        "OPENAI_API_KEY is not configured for this deployment yet. Add it in Vercel Environment Variables and redeploy.",
       memorySummary,
     };
   }
@@ -139,8 +158,8 @@ export async function generateAssistantReply(params: {
       throw new Error(`Model request failed: ${response.status}`);
     }
 
-    const payload = (await response.json()) as { output_text?: string };
-    const reply = payload.output_text?.trim();
+    const payload = await response.json();
+    const reply = extractModelText(payload);
 
     if (!reply) {
       throw new Error("Empty model reply");
@@ -149,7 +168,8 @@ export async function generateAssistantReply(params: {
     return { reply, memorySummary };
   } catch {
     return {
-      reply: localFallbackReply(userMessage, history, memorySummary),
+      reply:
+        "I couldn't reach the AI provider right now. Check OPENAI_API_KEY and model access, then try again.",
       memorySummary,
     };
   }
