@@ -3,11 +3,13 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  Bot,
   Calendar,
   CheckCircle2,
   Copy,
   Download,
   FolderKanban,
+  GripVertical,
   LayoutGrid,
   List,
   Loader2,
@@ -75,6 +77,12 @@ type Task = {
 
 type ApiError = {
   error?: string;
+};
+
+type ActivityItem = {
+  id: string;
+  text: string;
+  at: string;
 };
 
 async function parseApiError(response: Response) {
@@ -145,6 +153,8 @@ export function SecuredDashboard({ user }: { user: User }) {
   const [editTaskDueDate, setEditTaskDueDate] = useState("");
   const [editTaskPriority, setEditTaskPriority] = useState<TaskPriority>("medium");
   const [savingTaskEdit, setSavingTaskEdit] = useState(false);
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
 
   const activeProject = useMemo(
     () => projects.find((project) => project.id === activeProjectId) ?? null,
@@ -283,6 +293,93 @@ export function SecuredDashboard({ user }: { user: User }) {
     }
   }
 
+  function addActivity(text: string) {
+    setActivities((previous) => [
+      { id: crypto.randomUUID(), text, at: new Date().toISOString() },
+      ...previous,
+    ].slice(0, 12));
+  }
+
+  async function createTaskFromTemplate(input: {
+    title: string;
+    description: string;
+    status?: TaskStatus;
+    priority?: TaskPriority;
+  }) {
+    if (!activeProjectId) {
+      return;
+    }
+    const response = await fetch(`/api/projects/${activeProjectId}/tasks`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: input.title,
+        description: input.description,
+        status: input.status ?? "todo",
+        priority: input.priority ?? "medium",
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(await parseApiError(response));
+    }
+    const payload = (await response.json()) as { task: Task };
+    setTasks((previous) => [payload.task, ...previous]);
+  }
+
+  async function runAssistantPack(mode: "launch" | "growth" | "bugfix") {
+    if (!activeProjectId) {
+      return;
+    }
+    setCreatingTask(true);
+    try {
+      if (mode === "launch") {
+        await createTaskFromTemplate({
+          title: "Finalize launch checklist",
+          description: "Review feature scope, QA list, and release blockers.",
+          priority: "high",
+        });
+        await createTaskFromTemplate({
+          title: "Publish release announcement",
+          description: "Prepare post for social + changelog + email.",
+          status: "in_progress",
+          priority: "medium",
+        });
+      }
+      if (mode === "growth") {
+        await createTaskFromTemplate({
+          title: "Analyze activation funnel",
+          description: "Find top drop-off steps and propose experiments.",
+          priority: "high",
+        });
+        await createTaskFromTemplate({
+          title: "Plan retention campaign",
+          description: "Design a 7-day engagement sequence.",
+          priority: "medium",
+        });
+      }
+      if (mode === "bugfix") {
+        await createTaskFromTemplate({
+          title: "Triage high-priority bugs",
+          description: "Group by severity and assign owners.",
+          priority: "urgent",
+        });
+        await createTaskFromTemplate({
+          title: "Run regression checks",
+          description: "Verify critical paths after fixes are merged.",
+          status: "in_progress",
+          priority: "high",
+        });
+      }
+      addActivity(`Assistant pack applied: ${mode}`);
+      toast.success("Assistant tasks added");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to apply assistant pack";
+      toast.error(message);
+    } finally {
+      setCreatingTask(false);
+    }
+  }
+
   async function refreshActiveData() {
     await fetchProjects({ silent: false });
     if (activeProjectId) {
@@ -336,6 +433,7 @@ export function SecuredDashboard({ user }: { user: User }) {
       setActiveProjectId(payload.project.id);
       setProjectName("");
       setProjectDescription("");
+      addActivity(`Project created: ${payload.project.name}`);
       toast.success("Project created");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create project";
@@ -361,6 +459,7 @@ export function SecuredDashboard({ user }: { user: User }) {
         current === activeProject.id ? (remainingProjects[0]?.id ?? null) : current,
       );
       setTasks([]);
+      addActivity(`Project deleted: ${activeProject.name}`);
       toast.success("Project deleted");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to delete project";
@@ -404,6 +503,7 @@ export function SecuredDashboard({ user }: { user: User }) {
             : project,
         ),
       );
+      addActivity(`Project updated: ${payload.project.name}`);
       setEditingProjectOpen(false);
       toast.success("Project updated");
     } catch (error) {
@@ -450,6 +550,7 @@ export function SecuredDashboard({ user }: { user: User }) {
             : project,
         ),
       );
+      addActivity(`Task created: ${payload.task.title}`);
       toast.success("Task added");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create task";
@@ -489,6 +590,7 @@ export function SecuredDashboard({ user }: { user: User }) {
       const payload = (await response.json()) as { task: Task };
       setTasks((previous) => [payload.task, ...previous]);
       setQuickPrompt("");
+      addActivity(`Quick task captured: ${payload.task.title}`);
       toast.success("Quick task captured");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create quick task";
@@ -513,6 +615,7 @@ export function SecuredDashboard({ user }: { user: User }) {
       setTasks((previous) =>
         previous.map((task) => (task.id === taskId ? payload.task : task)),
       );
+      addActivity(`Task moved to ${statusLabel(status)}: ${payload.task.title}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to update task";
       toast.error(message);
@@ -550,6 +653,7 @@ export function SecuredDashboard({ user }: { user: User }) {
       }
       const payload = (await response.json()) as { task: Task };
       setTasks((previous) => previous.map((task) => (task.id === payload.task.id ? payload.task : task)));
+      addActivity(`Task updated: ${payload.task.title}`);
       setEditingTask(null);
       toast.success("Task updated");
     } catch (error) {
@@ -583,6 +687,7 @@ export function SecuredDashboard({ user }: { user: User }) {
       }
       const payload = (await response.json()) as { task: Task };
       setTasks((previous) => [payload.task, ...previous]);
+      addActivity(`Task duplicated: ${task.title}`);
       toast.success("Task duplicated");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to duplicate task";
@@ -607,6 +712,7 @@ export function SecuredDashboard({ user }: { user: User }) {
       setTasks((previous) =>
         previous.map((item) => (item.id === task.id ? payload.task : item)),
       );
+      addActivity(`${payload.task.starred ? "Favorited" : "Unfavorited"}: ${payload.task.title}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to update favorite";
       toast.error(message);
@@ -639,6 +745,7 @@ export function SecuredDashboard({ user }: { user: User }) {
             : task,
         ),
       );
+      addActivity(`Bulk update: ${pending.length} tasks marked done`);
       toast.success("Filtered tasks marked as done");
     } finally {
       setSyncing(false);
@@ -655,6 +762,7 @@ export function SecuredDashboard({ user }: { user: User }) {
     try {
       await Promise.all(completed.map((task) => fetch(`/api/tasks/${task.id}`, { method: "DELETE" })));
       setTasks((previous) => previous.filter((task) => !completed.some((item) => item.id === task.id)));
+      addActivity(`Bulk cleanup: ${completed.length} completed tasks removed`);
       toast.success("Completed tasks cleared");
     } finally {
       setSyncing(false);
@@ -696,12 +804,26 @@ export function SecuredDashboard({ user }: { user: User }) {
             : project,
         ),
       );
+      addActivity("Task removed");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to delete task";
       toast.error(message);
     } finally {
       setDeletingTaskId(null);
     }
+  }
+
+  async function handleDropToColumn(status: TaskStatus) {
+    if (!draggingTaskId) {
+      return;
+    }
+    const draggedTask = tasks.find((task) => task.id === draggingTaskId);
+    if (!draggedTask || draggedTask.status === status) {
+      setDraggingTaskId(null);
+      return;
+    }
+    await handleUpdateTaskStatus(draggingTaskId, status);
+    setDraggingTaskId(null);
   }
 
   const taskLists: Array<{ key: string; label: string; data: Task[] }> = [
@@ -964,6 +1086,42 @@ export function SecuredDashboard({ user }: { user: User }) {
                     </Button>
                   </div>
 
+                  <div className="rounded-xl border bg-white p-4">
+                    <p className="mb-2 flex items-center gap-2 text-sm font-medium">
+                      <Bot className="size-4 text-indigo-600" />
+                      Assistant Actions
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={creatingTask}
+                        onClick={() => runAssistantPack("launch")}
+                      >
+                        Launch Pack
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={creatingTask}
+                        onClick={() => runAssistantPack("growth")}
+                      >
+                        Growth Pack
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={creatingTask}
+                        onClick={() => runAssistantPack("bugfix")}
+                      >
+                        Bugfix Pack
+                      </Button>
+                    </div>
+                  </div>
+
                   <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
                     <div className="relative">
                       <Search className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground" />
@@ -1169,7 +1327,12 @@ export function SecuredDashboard({ user }: { user: User }) {
                   ) : (
                     <div className="grid gap-3 xl:grid-cols-3">
                       {boardColumns.map((column) => (
-                        <div key={column.key} className="rounded-xl border bg-slate-50/70 p-3">
+                        <div
+                          key={column.key}
+                          className={`rounded-xl border bg-slate-50/70 p-3 ${draggingTaskId ? "ring-1 ring-sky-200" : ""}`}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => void handleDropToColumn(column.key)}
+                        >
                           <div className="mb-3 flex items-center justify-between">
                             <p className="font-medium">{column.label}</p>
                             <Badge variant="outline">{column.items.length}</Badge>
@@ -1181,9 +1344,16 @@ export function SecuredDashboard({ user }: { user: User }) {
                               </div>
                             ) : (
                               column.items.map((task) => (
-                                <Card key={task.id} className="bg-white">
+                                <Card
+                                  key={task.id}
+                                  className="bg-white"
+                                  draggable
+                                  onDragStart={() => setDraggingTaskId(task.id)}
+                                  onDragEnd={() => setDraggingTaskId(null)}
+                                >
                                   <CardContent className="space-y-2 p-3">
                                     <div className="flex flex-wrap items-center gap-2">
+                                      <GripVertical className="size-4 text-muted-foreground" />
                                       <p className="text-sm font-medium">{task.title}</p>
                                       <Badge variant={priorityColor(task.priority)}>{task.priority}</Badge>
                                       {task.starred && <Badge variant="secondary">Favorite</Badge>}
@@ -1254,6 +1424,31 @@ export function SecuredDashboard({ user }: { user: User }) {
                     </div>
                   )}
                 </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200/80 bg-white/90">
+            <CardHeader>
+              <CardTitle className="text-base">Activity Timeline</CardTitle>
+              <CardDescription>Recent actions in your workspace.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {activities.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No activity yet. Create or update a task to start the feed.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {activities.map((activity) => (
+                    <div key={activity.id} className="rounded-md border bg-slate-50 p-3">
+                      <p className="text-sm font-medium">{activity.text}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(activity.at).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
