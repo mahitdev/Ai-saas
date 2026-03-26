@@ -98,6 +98,13 @@ export const taskStatusEnum = pgEnum("task_status", [
   "done",
 ]);
 
+export const taskPriorityEnum = pgEnum("task_priority", [
+  "low",
+  "medium",
+  "high",
+  "urgent",
+]);
+
 export const projectTask = pgTable(
   "project_task",
   {
@@ -111,6 +118,8 @@ export const projectTask = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     status: taskStatusEnum("status").default("todo").notNull(),
+    priority: taskPriorityEnum("priority").default("medium").notNull(),
+    starred: boolean("starred").default(false).notNull(),
     dueDate: timestamp("due_date"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

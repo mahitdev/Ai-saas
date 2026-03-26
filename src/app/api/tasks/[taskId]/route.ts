@@ -10,6 +10,8 @@ const updateTaskSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
   status: z.enum(["todo", "in_progress", "done"]).optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  starred: z.boolean().optional(),
   dueDate: z.string().datetime().optional().or(z.literal("")),
 });
 
@@ -69,6 +71,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         ? { description: parsedBody.data.description || null }
         : {}),
       ...(parsedBody.data.status !== undefined ? { status: parsedBody.data.status } : {}),
+      ...(parsedBody.data.priority !== undefined ? { priority: parsedBody.data.priority } : {}),
+      ...(parsedBody.data.starred !== undefined ? { starred: parsedBody.data.starred } : {}),
       ...(parsedBody.data.dueDate !== undefined
         ? { dueDate: parsedBody.data.dueDate ? new Date(parsedBody.data.dueDate) : null }
         : {}),

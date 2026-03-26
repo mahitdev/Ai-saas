@@ -59,6 +59,7 @@ const statements = [
   );`,
   `CREATE INDEX IF NOT EXISTS project_ownerId_idx ON project(owner_id);`,
   `DO $$ BEGIN CREATE TYPE task_status AS ENUM ('todo', 'in_progress', 'done'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+  `DO $$ BEGIN CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high', 'urgent'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
   `CREATE TABLE IF NOT EXISTS project_task (
     id text PRIMARY KEY,
     project_id text NOT NULL REFERENCES project(id) ON DELETE CASCADE,
@@ -66,10 +67,14 @@ const statements = [
     title text NOT NULL,
     description text,
     status task_status NOT NULL DEFAULT 'todo',
+    priority task_priority NOT NULL DEFAULT 'medium',
+    starred boolean NOT NULL DEFAULT false,
     due_date timestamp,
     created_at timestamp NOT NULL DEFAULT now(),
     updated_at timestamp NOT NULL DEFAULT now()
   );`,
+  `ALTER TABLE project_task ADD COLUMN IF NOT EXISTS priority task_priority NOT NULL DEFAULT 'medium';`,
+  `ALTER TABLE project_task ADD COLUMN IF NOT EXISTS starred boolean NOT NULL DEFAULT false;`,
   `CREATE INDEX IF NOT EXISTS project_task_projectId_idx ON project_task(project_id);`,
   `CREATE INDEX IF NOT EXISTS project_task_ownerId_idx ON project_task(owner_id);`
 ];

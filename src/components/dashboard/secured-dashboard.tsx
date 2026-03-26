@@ -2,7 +2,24 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, CheckCircle2, FolderKanban, LayoutGrid, List, Loader2, LogOut, Plus, Search, Shield, Sparkles } from "lucide-react";
+import {
+  Calendar,
+  CheckCircle2,
+  Copy,
+  Download,
+  FolderKanban,
+  LayoutGrid,
+  List,
+  Loader2,
+  LogOut,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Shield,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth.client";
@@ -10,6 +27,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +57,7 @@ type Project = {
 };
 
 type TaskStatus = "todo" | "in_progress" | "done";
+type TaskPriority = "low" | "medium" | "high" | "urgent";
 
 type Task = {
   id: string;
@@ -40,6 +66,8 @@ type Task = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
+  starred: boolean;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -74,6 +102,13 @@ function statusLabel(status: TaskStatus) {
   return "To Do";
 }
 
+function priorityColor(priority: TaskPriority) {
+  if (priority === "urgent") return "destructive" as const;
+  if (priority === "high") return "default" as const;
+  if (priority === "medium") return "secondary" as const;
+  return "outline" as const;
+}
+
 export function SecuredDashboard({ user }: { user: User }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -86,6 +121,7 @@ export function SecuredDashboard({ user }: { user: User }) {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [taskDueDate, setTaskDueDate] = useState("");
+  const [taskPriority, setTaskPriority] = useState<TaskPriority>("medium");
   const [creatingProject, setCreatingProject] = useState(false);
   const [creatingTask, setCreatingTask] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
@@ -95,6 +131,20 @@ export function SecuredDashboard({ user }: { user: User }) {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [quickPrompt, setQuickPrompt] = useState("");
+  const [taskDueFilter, setTaskDueFilter] = useState<"all" | "overdue" | "today" | "upcoming" | "no_due">("all");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | TaskPriority>("all");
+  const [starredOnly, setStarredOnly] = useState(false);
+  const [sortMode, setSortMode] = useState<"updated" | "due" | "title">("updated");
+  const [editingProjectOpen, setEditingProjectOpen] = useState(false);
+  const [editProjectName, setEditProjectName] = useState("");
+  const [editProjectDescription, setEditProjectDescription] = useState("");
+  const [savingProjectEdit, setSavingProjectEdit] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState("");
+  const [editTaskDescription, setEditTaskDescription] = useState("");
+  const [editTaskDueDate, setEditTaskDueDate] = useState("");
+  const [editTaskPriority, setEditTaskPriority] = useState<TaskPriority>("medium");
+  const [savingTaskEdit, setSavingTaskEdit] = useState(false);
 
   const activeProject = useMemo(
     () => projects.find((project) => project.id === activeProjectId) ?? null,
@@ -128,14 +178,53 @@ export function SecuredDashboard({ user }: { user: User }) {
 
   const filteredTasks = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    if (!normalizedSearch) {
-      return tasks;
-    }
-    return tasks.filter((task) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const bySearch = tasks.filter((task) => {
       const haystack = `${task.title} ${task.description ?? ""}`.toLowerCase();
+      if (!normalizedSearch) {
+        return true;
+      }
       return haystack.includes(normalizedSearch);
     });
-  }, [tasks, search]);
+
+    const byDue = bySearch.filter((task) => {
+      if (taskDueFilter === "all") {
+        return true;
+      }
+      if (!task.dueDate) {
+        return taskDueFilter === "no_due";
+      }
+      const due = new Date(task.dueDate);
+      due.setHours(0, 0, 0, 0);
+      if (taskDueFilter === "overdue") {
+        return due < today;
+      }
+      if (taskDueFilter === "today") {
+        return due.getTime() === today.getTime();
+      }
+      if (taskDueFilter === "upcoming") {
+        return due > today;
+      }
+      return true;
+    });
+
+    const byPriority = byDue.filter((task) => (priorityFilter === "all" ? true : task.priority === priorityFilter));
+    const byStar = byPriority.filter((task) => (starredOnly ? task.starred : true));
+
+    return [...byStar].sort((a, b) => {
+      if (sortMode === "title") {
+        return a.title.localeCompare(b.title);
+      }
+      if (sortMode === "due") {
+        const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+        const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+        return aDue - bDue;
+      }
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [tasks, search, sortMode, taskDueFilter, priorityFilter, starredOnly]);
 
   const todoFiltered = filteredTasks.filter((task) => task.status === "todo");
   const inProgressFiltered = filteredTasks.filter((task) => task.status === "in_progress");
@@ -191,6 +280,13 @@ export function SecuredDashboard({ user }: { user: User }) {
         setLoadingTasks(false);
       }
       setSyncing(false);
+    }
+  }
+
+  async function refreshActiveData() {
+    await fetchProjects({ silent: false });
+    if (activeProjectId) {
+      await fetchTasks(activeProjectId, { silent: false });
     }
   }
 
@@ -274,6 +370,50 @@ export function SecuredDashboard({ user }: { user: User }) {
     }
   }
 
+  function openProjectEditor() {
+    if (!activeProject) {
+      return;
+    }
+    setEditProjectName(activeProject.name);
+    setEditProjectDescription(activeProject.description ?? "");
+    setEditingProjectOpen(true);
+  }
+
+  async function handleSaveProjectEdit() {
+    if (!activeProject || !editProjectName.trim()) {
+      return;
+    }
+    setSavingProjectEdit(true);
+    try {
+      const response = await fetch(`/api/projects/${activeProject.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: editProjectName.trim(),
+          description: editProjectDescription.trim(),
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(await parseApiError(response));
+      }
+      const payload = (await response.json()) as { project: Project };
+      setProjects((previous) =>
+        previous.map((project) =>
+          project.id === payload.project.id
+            ? { ...project, name: payload.project.name, description: payload.project.description }
+            : project,
+        ),
+      );
+      setEditingProjectOpen(false);
+      toast.success("Project updated");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update project";
+      toast.error(message);
+    } finally {
+      setSavingProjectEdit(false);
+    }
+  }
+
   async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!activeProjectId || !taskTitle.trim()) {
@@ -288,6 +428,7 @@ export function SecuredDashboard({ user }: { user: User }) {
           title: taskTitle,
           description: taskDescription,
           status: "todo",
+          priority: taskPriority,
           dueDate: taskDueDate
             ? new Date(`${taskDueDate}T00:00:00`).toISOString()
             : undefined,
@@ -301,6 +442,7 @@ export function SecuredDashboard({ user }: { user: User }) {
       setTaskTitle("");
       setTaskDescription("");
       setTaskDueDate("");
+      setTaskPriority("medium");
       setProjects((previous) =>
         previous.map((project) =>
           project.id === activeProjectId
@@ -337,6 +479,7 @@ export function SecuredDashboard({ user }: { user: User }) {
           title,
           description: "Created from quick capture",
           status,
+          priority: "medium",
           dueDate: dueDate ? dueDate.toISOString() : undefined,
         }),
       });
@@ -376,6 +519,166 @@ export function SecuredDashboard({ user }: { user: User }) {
     } finally {
       setUpdatingTaskId(null);
     }
+  }
+
+  function openTaskEditor(task: Task) {
+    setEditingTask(task);
+    setEditTaskTitle(task.title);
+    setEditTaskDescription(task.description ?? "");
+    setEditTaskDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : "");
+    setEditTaskPriority(task.priority);
+  }
+
+  async function handleSaveTaskEdit() {
+    if (!editingTask || !editTaskTitle.trim()) {
+      return;
+    }
+    setSavingTaskEdit(true);
+    try {
+      const response = await fetch(`/api/tasks/${editingTask.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: editTaskTitle.trim(),
+          description: editTaskDescription.trim(),
+          priority: editTaskPriority,
+          dueDate: editTaskDueDate ? new Date(`${editTaskDueDate}T00:00:00`).toISOString() : "",
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(await parseApiError(response));
+      }
+      const payload = (await response.json()) as { task: Task };
+      setTasks((previous) => previous.map((task) => (task.id === payload.task.id ? payload.task : task)));
+      setEditingTask(null);
+      toast.success("Task updated");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update task";
+      toast.error(message);
+    } finally {
+      setSavingTaskEdit(false);
+    }
+  }
+
+  async function handleDuplicateTask(task: Task) {
+    if (!activeProjectId) {
+      return;
+    }
+    setCreatingTask(true);
+    try {
+      const response = await fetch(`/api/projects/${activeProjectId}/tasks`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: `${task.title} (Copy)`,
+          description: task.description ?? "",
+          status: task.status,
+          priority: task.priority,
+          starred: false,
+          dueDate: task.dueDate || undefined,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(await parseApiError(response));
+      }
+      const payload = (await response.json()) as { task: Task };
+      setTasks((previous) => [payload.task, ...previous]);
+      toast.success("Task duplicated");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to duplicate task";
+      toast.error(message);
+    } finally {
+      setCreatingTask(false);
+    }
+  }
+
+  async function handleToggleStar(task: Task) {
+    setUpdatingTaskId(task.id);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ starred: !task.starred }),
+      });
+      if (!response.ok) {
+        throw new Error(await parseApiError(response));
+      }
+      const payload = (await response.json()) as { task: Task };
+      setTasks((previous) =>
+        previous.map((item) => (item.id === task.id ? payload.task : item)),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update favorite";
+      toast.error(message);
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  }
+
+  async function handleMarkFilteredDone() {
+    const pending = filteredTasks.filter((task) => task.status !== "done");
+    if (pending.length === 0) {
+      toast.message("No pending tasks in current filter");
+      return;
+    }
+    setSyncing(true);
+    try {
+      await Promise.all(
+        pending.map((task) =>
+          fetch(`/api/tasks/${task.id}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ status: "done" }),
+          }),
+        ),
+      );
+      setTasks((previous) =>
+        previous.map((task) =>
+          pending.some((pendingTask) => pendingTask.id === task.id)
+            ? { ...task, status: "done", updatedAt: new Date().toISOString() }
+            : task,
+        ),
+      );
+      toast.success("Filtered tasks marked as done");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleClearCompleted() {
+    const completed = filteredTasks.filter((task) => task.status === "done");
+    if (completed.length === 0) {
+      toast.message("No completed tasks in current filter");
+      return;
+    }
+    setSyncing(true);
+    try {
+      await Promise.all(completed.map((task) => fetch(`/api/tasks/${task.id}`, { method: "DELETE" })));
+      setTasks((previous) => previous.filter((task) => !completed.some((item) => item.id === task.id)));
+      toast.success("Completed tasks cleared");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  function handleExportTasks() {
+    const payload = JSON.stringify(
+      {
+        project: activeProject,
+        exportedAt: new Date().toISOString(),
+        tasks: filteredTasks,
+      },
+      null,
+      2,
+    );
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${activeProject?.name ?? "project"}-tasks.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Task export downloaded");
   }
 
   async function handleDeleteTask(taskId: string) {
@@ -563,6 +866,24 @@ export function SecuredDashboard({ user }: { user: User }) {
                   </Badge>
                   <Badge variant="secondary">{completion}% complete</Badge>
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={refreshActiveData}
+                    disabled={syncing}
+                  >
+                    <RefreshCw className={`mr-2 size-4 ${syncing ? "animate-spin" : ""}`} />
+                    Refresh
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openProjectEditor}
+                    disabled={!activeProject}
+                  >
+                    <Pencil className="mr-2 size-4" />
+                    Edit
+                  </Button>
+                  <Button
                     variant="destructive"
                     size="sm"
                     onClick={handleDeleteProject}
@@ -582,7 +903,7 @@ export function SecuredDashboard({ user }: { user: User }) {
                 </div>
               ) : (
                 <>
-                  <form className="grid gap-3 rounded-xl border bg-slate-50/80 p-4 md:grid-cols-[1fr_1fr_180px_auto]" onSubmit={handleCreateTask}>
+                  <form className="grid gap-3 rounded-xl border bg-slate-50/80 p-4 md:grid-cols-[1fr_1fr_140px_160px_auto]" onSubmit={handleCreateTask}>
                     <Input
                       placeholder="Task title"
                       value={taskTitle}
@@ -604,6 +925,16 @@ export function SecuredDashboard({ user }: { user: User }) {
                         className="pl-9"
                       />
                     </div>
+                    <select
+                      className="h-10 rounded-md border bg-white px-3 text-sm"
+                      value={taskPriority}
+                      onChange={(event) => setTaskPriority(event.target.value as TaskPriority)}
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
                     <Button type="submit" disabled={creatingTask}>
                       {creatingTask ? "Adding..." : "Add Task"}
                     </Button>
@@ -653,6 +984,51 @@ export function SecuredDashboard({ user }: { user: User }) {
                       Done: {doneTasks}
                     </Badge>
                     <div className="col-span-full flex gap-2">
+                      <select
+                        className="h-9 rounded-md border bg-white px-3 text-sm"
+                        value={taskDueFilter}
+                        onChange={(event) =>
+                          setTaskDueFilter(
+                            event.target.value as "all" | "overdue" | "today" | "upcoming" | "no_due",
+                          )
+                        }
+                      >
+                        <option value="all">All due dates</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="today">Due today</option>
+                        <option value="upcoming">Upcoming</option>
+                        <option value="no_due">No due date</option>
+                      </select>
+                      <select
+                        className="h-9 rounded-md border bg-white px-3 text-sm"
+                        value={sortMode}
+                        onChange={(event) =>
+                          setSortMode(event.target.value as "updated" | "due" | "title")
+                        }
+                      >
+                        <option value="updated">Sort: Updated</option>
+                        <option value="due">Sort: Due Date</option>
+                        <option value="title">Sort: Title</option>
+                      </select>
+                      <select
+                        className="h-9 rounded-md border bg-white px-3 text-sm"
+                        value={priorityFilter}
+                        onChange={(event) => setPriorityFilter(event.target.value as "all" | TaskPriority)}
+                      >
+                        <option value="all">All priority</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                      </select>
+                      <Button
+                        type="button"
+                        variant={starredOnly ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setStarredOnly((current) => !current)}
+                      >
+                        Favorites Only
+                      </Button>
                       <Button
                         type="button"
                         variant={viewMode === "board" ? "default" : "outline"}
@@ -670,6 +1046,17 @@ export function SecuredDashboard({ user }: { user: User }) {
                       >
                         <List className="mr-2 size-4" />
                         List
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={handleMarkFilteredDone}>
+                        Mark Filtered Done
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={handleClearCompleted}>
+                        <Trash2 className="mr-2 size-4" />
+                        Clear Completed
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={handleExportTasks}>
+                        <Download className="mr-2 size-4" />
+                        Export
                       </Button>
                     </div>
                   </div>
@@ -706,6 +1093,10 @@ export function SecuredDashboard({ user }: { user: User }) {
                                         <Badge variant={statusBadgeVariant(task.status)}>
                                           {statusLabel(task.status)}
                                         </Badge>
+                                        <Badge variant={priorityColor(task.priority)}>
+                                          {task.priority}
+                                        </Badge>
+                                        {task.starred && <Badge variant="secondary">Favorite</Badge>}
                                       </div>
                                       <p className="text-sm text-muted-foreground">
                                         {task.description || "No description"}
@@ -733,6 +1124,31 @@ export function SecuredDashboard({ user }: { user: User }) {
                                         <option value="in_progress">In Progress</option>
                                         <option value="done">Done</option>
                                       </select>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleToggleStar(task)}
+                                        disabled={updatingTaskId === task.id}
+                                      >
+                                        {task.starred ? "Unfavorite" : "Favorite"}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => openTaskEditor(task)}
+                                      >
+                                        <Pencil className="mr-2 size-4" />
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleDuplicateTask(task)}
+                                        disabled={creatingTask}
+                                      >
+                                        <Copy className="mr-2 size-4" />
+                                        Duplicate
+                                      </Button>
                                       <Button
                                         variant="outline"
                                         size="sm"
@@ -767,7 +1183,11 @@ export function SecuredDashboard({ user }: { user: User }) {
                               column.items.map((task) => (
                                 <Card key={task.id} className="bg-white">
                                   <CardContent className="space-y-2 p-3">
-                                    <p className="text-sm font-medium">{task.title}</p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-sm font-medium">{task.title}</p>
+                                      <Badge variant={priorityColor(task.priority)}>{task.priority}</Badge>
+                                      {task.starred && <Badge variant="secondary">Favorite</Badge>}
+                                    </div>
                                     <p className="line-clamp-2 text-xs text-muted-foreground">
                                       {task.description || "No description"}
                                     </p>
@@ -802,6 +1222,27 @@ export function SecuredDashboard({ user }: { user: User }) {
                                           Done
                                         </Button>
                                       )}
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleToggleStar(task)}
+                                      >
+                                        {task.starred ? "Unfav" : "Fav"}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => openTaskEditor(task)}
+                                      >
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleDuplicateTask(task)}
+                                      >
+                                        Copy
+                                      </Button>
                                     </div>
                                   </CardContent>
                                 </Card>
@@ -818,6 +1259,86 @@ export function SecuredDashboard({ user }: { user: User }) {
           </Card>
         </div>
       </div>
+
+      <Dialog open={editingProjectOpen} onOpenChange={setEditingProjectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+            <DialogDescription>Update the project name and description.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={editProjectName}
+              onChange={(event) => setEditProjectName(event.target.value)}
+              placeholder="Project name"
+            />
+            <Textarea
+              value={editProjectDescription}
+              onChange={(event) => setEditProjectDescription(event.target.value)}
+              placeholder="Project description"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingProjectOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveProjectEdit} disabled={savingProjectEdit || !editProjectName.trim()}>
+              {savingProjectEdit ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editingTask)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingTask(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>Update title, description, and due date.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={editTaskTitle}
+              onChange={(event) => setEditTaskTitle(event.target.value)}
+              placeholder="Task title"
+            />
+            <Textarea
+              value={editTaskDescription}
+              onChange={(event) => setEditTaskDescription(event.target.value)}
+              placeholder="Task description"
+            />
+            <Input
+              type="date"
+              value={editTaskDueDate}
+              onChange={(event) => setEditTaskDueDate(event.target.value)}
+            />
+            <select
+              className="h-10 w-full rounded-md border bg-white px-3 text-sm"
+              value={editTaskPriority}
+              onChange={(event) => setEditTaskPriority(event.target.value as TaskPriority)}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTask(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveTaskEdit} disabled={savingTaskEdit || !editTaskTitle.trim()}>
+              {savingTaskEdit ? "Saving..." : "Save Task"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

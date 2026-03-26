@@ -19,13 +19,18 @@ globalRateLimitStore.__rateLimitStore = rateLimitStore;
 function applySecurityHeaders(response: NextResponse) {
   response.headers.set("x-content-type-options", "nosniff");
   response.headers.set("x-frame-options", "DENY");
+  response.headers.set("x-dns-prefetch-control", "off");
+  response.headers.set("x-download-options", "noopen");
+  response.headers.set("cross-origin-opener-policy", "same-origin");
+  response.headers.set("cross-origin-resource-policy", "same-origin");
   response.headers.set("referrer-policy", "strict-origin-when-cross-origin");
   response.headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
+  response.headers.set("x-permitted-cross-domain-policies", "none");
   response.headers.set(
     "content-security-policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
@@ -37,6 +42,22 @@ function applySecurityHeaders(response: NextResponse) {
       "upgrade-insecure-requests",
     ].join("; "),
   );
+}
+
+function applyApiCacheHeaders(response: NextResponse) {
+  response.headers.set("cache-control", "no-store, max-age=0");
+}
+
+function isTrustedOrigin(origin: string, request: NextRequest) {
+  const requestOrigin = request.nextUrl.origin;
+  const allowedOrigins = new Set(
+    [process.env.BETTER_AUTH_URL, process.env.ALLOWED_ORIGINS]
+      .flatMap((value) => (value ? value.split(",") : []))
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  allowedOrigins.add(requestOrigin);
+  return allowedOrigins.has(origin);
 }
 
 function getRequestIdentifier(request: NextRequest) {
@@ -52,7 +73,34 @@ function isMutation(method: string) {
 }
 
 export function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith("/api/") && isMutation(request.method)) {
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+  const isAuthApi = request.nextUrl.pathname.startsWith("/api/auth/");
+
+  if (isApiRoute && isMutation(request.method)) {
+    const origin = request.headers.get("origin");
+    if (origin && !isTrustedOrigin(origin, request)) {
+      const forbiddenResponse = NextResponse.json(
+        { error: "Blocked by origin policy" },
+        { status: 403 },
+      );
+      applyApiCacheHeaders(forbiddenResponse);
+      applySecurityHeaders(forbiddenResponse);
+      return forbiddenResponse;
+    }
+
+    if (!isAuthApi && request.method !== "DELETE") {
+      const contentType = request.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        const invalidTypeResponse = NextResponse.json(
+          { error: "Unsupported content type" },
+          { status: 415 },
+        );
+        applyApiCacheHeaders(invalidTypeResponse);
+        applySecurityHeaders(invalidTypeResponse);
+        return invalidTypeResponse;
+      }
+    }
+
     const key = `${getRequestIdentifier(request)}:${request.nextUrl.pathname}`;
     const now = Date.now();
     const current = rateLimitStore.get(key);
@@ -74,6 +122,7 @@ export function middleware(request: NextRequest) {
           },
         },
       );
+      applyApiCacheHeaders(limitedResponse);
       applySecurityHeaders(limitedResponse);
       return limitedResponse;
     } else {
@@ -83,6 +132,12 @@ export function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
+  if (request.nextUrl.protocol === "https:") {
+    response.headers.set("strict-transport-security", "max-age=63072000; includeSubDomains; preload");
+  }
+  if (isApiRoute) {
+    applyApiCacheHeaders(response);
+  }
   applySecurityHeaders(response);
   return response;
 }

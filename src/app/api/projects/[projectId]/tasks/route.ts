@@ -10,6 +10,8 @@ const createTaskSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
   status: z.enum(["todo", "in_progress", "done"]).optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  starred: z.boolean().optional(),
   dueDate: z.string().datetime().optional().or(z.literal("")),
 });
 
@@ -83,6 +85,8 @@ export async function POST(request: Request, context: RouteContext) {
       title: parsedBody.data.title,
       description: parsedBody.data.description || null,
       status: parsedBody.data.status ?? "todo",
+      priority: parsedBody.data.priority ?? "medium",
+      starred: parsedBody.data.starred ?? false,
       dueDate: parsedBody.data.dueDate ? new Date(parsedBody.data.dueDate) : null,
     })
     .returning();
