@@ -250,9 +250,9 @@ export function AiChatDashboard({ user }: { user: User }) {
   }
 
   return (
-    <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.2),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#111827_100%)] p-4 md:p-8 text-slate-100">
+    <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.2),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#111827_100%)] p-4 text-slate-100 md:p-8">
       <div className="mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-[290px_1fr]">
-        <Card className="h-fit border-slate-700/70 bg-slate-900/70 backdrop-blur">
+        <Card className="h-fit border-slate-700/70 bg-slate-950/80 text-slate-100 backdrop-blur">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Avatar className="size-10">
@@ -267,7 +267,7 @@ export function AiChatDashboard({ user }: { user: User }) {
             <CardDescription className="text-slate-400">Your AI memory chat space.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button className="w-full" onClick={() => void createConversation()}>
+            <Button className="w-full bg-cyan-500/15 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.28)] hover:bg-cyan-500/25" onClick={() => void createConversation()}>
               <Plus className="mr-2 size-4" />
               New Chat
             </Button>
@@ -314,7 +314,7 @@ export function AiChatDashboard({ user }: { user: User }) {
 
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
               onClick={() =>
                 authClient.signOut({
                   fetchOptions: {
@@ -328,12 +328,12 @@ export function AiChatDashboard({ user }: { user: User }) {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-700/70 bg-slate-900/70">
+        <Card className="border-slate-700/70 bg-slate-950/80 text-slate-100">
           <CardHeader>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="size-5 text-cyan-300" />
+                <CardTitle className="flex items-center gap-2 text-cyan-200 [text-shadow:0_0_16px_rgba(34,211,238,0.55)]">
+                  <Bot className="size-5 text-cyan-300 drop-shadow-[0_0_10px_rgba(34,211,238,0.7)]" />
                   AI Chat With Memory
                 </CardTitle>
                 <CardDescription className="text-slate-400">
@@ -345,6 +345,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                   type="button"
                   variant={listening ? "default" : "outline"}
                   size="sm"
+                  className={listening ? "bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.35)]" : "border-slate-700 bg-slate-900 text-slate-200"}
                   onClick={toggleListening}
                 >
                   {listening ? <MicOff className="mr-2 size-4" /> : <Mic className="mr-2 size-4" />}
@@ -354,6 +355,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                   type="button"
                   variant={voiceOutputEnabled ? "default" : "outline"}
                   size="sm"
+                  className={voiceOutputEnabled ? "bg-indigo-500/20 text-indigo-100 shadow-[0_0_14px_rgba(129,140,248,0.35)]" : "border-slate-700 bg-slate-900 text-slate-200"}
                   onClick={() => setVoiceOutputEnabled((current) => !current)}
                 >
                   {voiceOutputEnabled ? <Volume2 className="mr-2 size-4" /> : <VolumeX className="mr-2 size-4" />}
@@ -361,7 +363,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                 </Button>
               </div>
             </div>
-            <Badge variant="outline" className="w-fit">
+            <Badge variant="outline" className="w-fit border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
               Memory: {memory ? `${memory.split("\n").length} notes` : "empty"}
             </Badge>
           </CardHeader>
@@ -401,6 +403,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="Ask anything..."
+                className="border-slate-700 bg-slate-950 text-slate-100 placeholder:text-slate-500"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
@@ -408,7 +411,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                   }
                 }}
               />
-              <Button onClick={() => void sendMessage()} disabled={sending || !input.trim()}>
+              <Button className="bg-cyan-500/15 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.25)] hover:bg-cyan-500/25" onClick={() => void sendMessage()} disabled={sending || !input.trim()}>
                 {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               </Button>
             </div>

@@ -35,7 +35,7 @@ export default function Home() {
 
       <div className="relative mx-auto flex min-h-svh w-full max-w-6xl flex-col justify-center gap-10 px-6 py-12 md:px-10">
         <section className="space-y-6">
-          <Badge className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
+          <Badge className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200 [text-shadow:0_0_10px_rgba(34,211,238,0.6)]">
             AI Voice + Memory Chat
           </Badge>
 
@@ -51,7 +51,7 @@ export default function Home() {
           </p>
 
           <div className="flex flex-wrap gap-3">
-            <Button asChild size="lg" className="bg-white text-slate-950 hover:bg-slate-200">
+            <Button asChild size="lg" className="border border-cyan-300/40 bg-cyan-500/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.3)] hover:bg-cyan-500/20 hover:text-cyan-50">
               <Link href="/auth/sign-up">
                 Start chatting
                 <ArrowRight className="ml-2 size-4" />
@@ -67,7 +67,7 @@ export default function Home() {
           <Card className="border-slate-800 bg-slate-900/60">
             <CardContent className="space-y-2 p-5">
               <Bot className="size-5 text-cyan-300" />
-              <p className="font-medium">Conversational AI</p>
+              <p className="font-medium text-cyan-100 [text-shadow:0_0_12px_rgba(34,211,238,0.5)]">Conversational AI</p>
               <p className="text-sm text-slate-400">Ask anything and keep context across chats.</p>
             </CardContent>
           </Card>
@@ -75,7 +75,7 @@ export default function Home() {
           <Card className="border-slate-800 bg-slate-900/60">
             <CardContent className="space-y-2 p-5">
               <Mic className="size-5 text-blue-300" />
-              <p className="font-medium">Talk Naturally</p>
+              <p className="font-medium text-blue-100 [text-shadow:0_0_12px_rgba(96,165,250,0.55)]">Talk Naturally</p>
               <p className="text-sm text-slate-400">Voice input and spoken AI responses.</p>
             </CardContent>
           </Card>
@@ -83,7 +83,7 @@ export default function Home() {
           <Card className="border-slate-800 bg-slate-900/60">
             <CardContent className="space-y-2 p-5">
               <Sparkles className="size-5 text-fuchsia-300" />
-              <p className="font-medium">Smart Memory</p>
+              <p className="font-medium text-fuchsia-100 [text-shadow:0_0_12px_rgba(217,70,239,0.55)]">Smart Memory</p>
               <p className="text-sm text-slate-400">Important details are remembered over time.</p>
             </CardContent>
           </Card>
@@ -91,7 +91,7 @@ export default function Home() {
           <Card className="border-slate-800 bg-slate-900/60">
             <CardContent className="space-y-2 p-5">
               <Lock className="size-5 text-emerald-300" />
-              <p className="font-medium">Secure by default</p>
+              <p className="font-medium text-emerald-100 [text-shadow:0_0_12px_rgba(52,211,153,0.55)]">Secure by default</p>
               <p className="text-sm text-slate-400">Protected auth and hardened API layer.</p>
             </CardContent>
           </Card>
