@@ -1,0 +1,38 @@
+<svg width="900" height="600" viewBox="0 0 900 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgs" x1="0" y1="0" x2="900" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <radialGradient id="glows" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(450 286) rotate(90) scale(220 300)">
+      <stop stop-color="#34D399" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#34D399" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shield" x1="450" y1="150" x2="450" y2="432" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A7F3D0"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="600" fill="url(#bgs)"/>
+  <rect width="900" height="600" fill="url(#glows)"/>
+  <g stroke="#334155" stroke-opacity="0.65">
+    <path d="M0 90H900"/>
+    <path d="M0 180H900"/>
+    <path d="M0 270H900"/>
+    <path d="M0 360H900"/>
+    <path d="M0 450H900"/>
+    <path d="M0 540H900"/>
+    <path d="M90 0V600"/>
+    <path d="M180 0V600"/>
+    <path d="M270 0V600"/>
+    <path d="M360 0V600"/>
+    <path d="M450 0V600"/>
+    <path d="M540 0V600"/>
+    <path d="M630 0V600"/>
+    <path d="M720 0V600"/>
+    <path d="M810 0V600"/>
+  </g>
+  <path d="M450 150L588 201V310C588 372 534 423 450 450C366 423 312 372 312 310V201L450 150Z" fill="#052E2B" stroke="#34D399" stroke-opacity="0.6" stroke-width="3"/>
+  <path d="M450 186L552 224V304C552 349 513 386 450 410C387 386 348 349 348 304V224L450 186Z" fill="url(#shield)" fill-opacity="0.23"/>
+  <path d="M396 303L435 342L505 260" stroke="#A7F3D0" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

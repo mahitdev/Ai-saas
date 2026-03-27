@@ -30,15 +30,15 @@ export default function Home() {
   }
 
   return (
-    <main className="relative min-h-[118svh] overflow-hidden bg-[#05060a] text-white">
+    <main className="relative min-h-[130svh] overflow-hidden bg-[#05060a] text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(34,211,238,0.18),transparent_30%),radial-gradient(circle_at_85%_15%,rgba(59,130,246,0.20),transparent_32%),radial-gradient(circle_at_50%_120%,rgba(168,85,247,0.20),transparent_40%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.03)_1px),linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.03)_1px)] bg-[size:36px_36px]" />
       <div className="pointer-events-none absolute -left-12 top-24 h-48 w-48 rounded-full bg-cyan-400/30 animate-glow-pulse" />
       <div className="pointer-events-none absolute right-8 top-40 h-40 w-40 rounded-full bg-indigo-400/30 animate-glow-pulse [animation-delay:0.8s]" />
       <div className="pointer-events-none absolute bottom-20 left-[35%] h-36 w-36 rounded-full bg-fuchsia-400/20 animate-glow-pulse [animation-delay:1.6s]" />
 
-      <div className="relative mx-auto flex min-h-svh w-full max-w-[84rem] flex-col justify-center gap-12 px-6 py-14 md:px-10 md:py-20">
-        <section className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+      <div className="relative mx-auto flex min-h-svh w-full max-w-[90rem] flex-col justify-center gap-14 px-6 py-16 md:px-10 md:py-24">
+        <section className="grid items-center gap-10 lg:grid-cols-[1.02fr_0.98fr] lg:gap-14">
           <div className="space-y-6">
             <Badge className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200 [text-shadow:0_0_10px_rgba(34,211,238,0.6)]">
               AI Voice + Memory Chat
@@ -68,7 +68,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid gap-4 animate-drift-x">
+          <div className="grid gap-5 animate-drift-x">
             <Card className="overflow-hidden border-cyan-500/30 bg-slate-950/80 shadow-[0_0_35px_rgba(34,211,238,0.2)] transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
               <CardContent className="p-0">
                 <Image
@@ -81,7 +81,7 @@ export default function Home() {
                 />
               </CardContent>
             </Card>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-2">
               <Card className="border-indigo-500/25 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.02]">
                 <CardContent className="space-y-2 p-4">
                   <Brain className="size-5 text-indigo-300 animate-float-mid" />
@@ -134,7 +134,7 @@ export default function Home() {
           </Card>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+        <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
           <Card className="overflow-hidden border-slate-800 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
             <CardContent className="p-0">
               <Image
@@ -169,6 +169,42 @@ export default function Home() {
                   persistent
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-5 md:grid-cols-3">
+          <Card className="overflow-hidden border-cyan-500/25 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
+            <CardContent className="p-0">
+              <Image
+                src="/hero-voice-wave.svg"
+                alt="Voice waveform visual"
+                width={900}
+                height={600}
+                className="h-auto w-full animate-float-mid"
+              />
+            </CardContent>
+          </Card>
+          <Card className="overflow-hidden border-indigo-500/25 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
+            <CardContent className="p-0">
+              <Image
+                src="/hero-security-grid.svg"
+                alt="Security shield visual"
+                width={900}
+                height={600}
+                className="h-auto w-full animate-float-mid [animation-delay:0.4s]"
+              />
+            </CardContent>
+          </Card>
+          <Card className="overflow-hidden border-fuchsia-500/25 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
+            <CardContent className="p-0">
+              <Image
+                src="/hero-neon-chat.svg"
+                alt="AI interaction visual"
+                width={900}
+                height={600}
+                className="h-auto w-full animate-float-mid [animation-delay:0.8s]"
+              />
             </CardContent>
           </Card>
         </section>

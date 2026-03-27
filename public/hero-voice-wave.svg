@@ -1,0 +1,23 @@
+<svg width="900" height="600" viewBox="0 0 900 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgv" x1="0" y1="0" x2="900" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="linev" x1="118" y1="300" x2="782" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="0.5" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#D946EF"/>
+    </linearGradient>
+    <radialGradient id="glowv" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(450 300) rotate(90) scale(200 360)">
+      <stop stop-color="#22D3EE" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="600" fill="url(#bgv)"/>
+  <rect width="900" height="600" fill="url(#glowv)"/>
+  <path d="M118 300C146 300 146 225 174 225C202 225 202 375 230 375C258 375 258 166 286 166C314 166 314 434 342 434C370 434 370 202 398 202C426 202 426 398 454 398C482 398 482 172 510 172C538 172 538 428 566 428C594 428 594 240 622 240C650 240 650 360 678 360C706 360 706 276 734 276C762 276 762 300 782 300" stroke="url(#linev)" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="450" cy="300" r="94" stroke="#22D3EE" stroke-opacity="0.4" stroke-width="2"/>
+  <circle cx="450" cy="300" r="138" stroke="#818CF8" stroke-opacity="0.25" stroke-width="2" stroke-dasharray="8 8"/>
+  <circle cx="450" cy="300" r="172" stroke="#D946EF" stroke-opacity="0.2" stroke-width="2" stroke-dasharray="10 10"/>
+</svg>
