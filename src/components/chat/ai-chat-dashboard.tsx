@@ -80,6 +80,10 @@ export function AiChatDashboard({ user }: { user: User }) {
         .toUpperCase(),
     [user.name],
   );
+  const activeConversation = useMemo(
+    () => conversations.find((conversation) => conversation.id === activeConversationId) ?? null,
+    [conversations, activeConversationId],
+  );
 
   function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -369,51 +373,93 @@ export function AiChatDashboard({ user }: { user: User }) {
           </CardHeader>
 
           <CardContent className="space-y-3">
-            <ScrollArea className="h-[420px] rounded-lg border border-slate-700 bg-[#050914] p-4">
-              {loadingMessages ? (
-                <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Loading messages...
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                  Start chatting. I will remember context.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                        message.role === "user"
-                          ? "ml-auto border border-cyan-400/40 bg-slate-900 text-cyan-100 [text-shadow:0_0_10px_rgba(34,211,238,0.5)]"
-                          : "border border-indigo-400/35 bg-slate-950/80 text-indigo-100 [text-shadow:0_0_10px_rgba(129,140,248,0.5)]"
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap">{message.content}</p>
+            <div className="grid gap-3 lg:grid-cols-[1fr_260px]">
+              <div className="space-y-3">
+                <ScrollArea className="h-[420px] rounded-lg border border-slate-700 bg-[#050914] p-4">
+                  {loadingMessages ? (
+                    <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Loading messages...
                     </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              )}
-            </ScrollArea>
+                  ) : messages.length === 0 ? (
+                    <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                      Start chatting. I will remember context.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                            message.role === "user"
+                              ? "ml-auto border border-cyan-400/40 bg-slate-900 text-cyan-100 [text-shadow:0_0_10px_rgba(34,211,238,0.5)]"
+                              : "border border-indigo-400/35 bg-slate-950/80 text-indigo-100 [text-shadow:0_0_10px_rgba(129,140,248,0.5)]"
+                          }`}
+                        >
+                          <p className="whitespace-pre-wrap">{message.content}</p>
+                        </div>
+                      ))}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  )}
+                </ScrollArea>
 
-            <div className="flex gap-2">
-              <Input
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder="Ask anything..."
-                className="border-slate-700 bg-slate-950 text-slate-100 placeholder:text-slate-500"
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void sendMessage();
-                  }
-                }}
-              />
-              <Button className="bg-cyan-500/15 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.25)] hover:bg-cyan-500/25" onClick={() => void sendMessage()} disabled={sending || !input.trim()}>
-                {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-              </Button>
+                <div className="flex gap-2">
+                  <Input
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    placeholder="Ask anything..."
+                    className="border-slate-700 bg-slate-950 text-slate-100 placeholder:text-slate-500"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        void sendMessage();
+                      }
+                    }}
+                  />
+                  <Button className="bg-cyan-500/15 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.25)] hover:bg-cyan-500/25" onClick={() => void sendMessage()} disabled={sending || !input.trim()}>
+                    {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="text-xs font-semibold tracking-wide text-cyan-300 uppercase">Section 1: Chat Info</p>
+                  <p className="mt-2 text-sm text-slate-300">Active chat</p>
+                  <p className="truncate text-sm font-medium text-cyan-100">{activeConversation?.title ?? "No chat selected"}</p>
+                  <p className="mt-2 text-xs text-slate-400">Messages: {messages.length}</p>
+                </div>
+
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="text-xs font-semibold tracking-wide text-indigo-300 uppercase">Section 2: Memory</p>
+                  <div className="mt-2 space-y-1">
+                    {memory ? memory.split("\n").slice(0, 5).map((line, idx) => (
+                      <p key={`${line}-${idx}`} className="text-xs text-slate-300">- {line}</p>
+                    )) : <p className="text-xs text-slate-500">No memory captured yet.</p>}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="text-xs font-semibold tracking-wide text-fuchsia-300 uppercase">Section 3: Quick Starters</p>
+                  <div className="mt-2 space-y-2">
+                    {[
+                      "Help me plan my day in 5 steps",
+                      "Summarize what you remember about me",
+                      "Give me a focused study plan",
+                    ].map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-left text-xs text-slate-200 hover:border-cyan-400/60 hover:text-cyan-100"
+                        onClick={() => setInput(prompt)}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
