@@ -1,0 +1,48 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1200" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#030712"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 360) rotate(90) scale(230 230)">
+      <stop stop-color="#BAE6FD"/>
+      <stop offset="0.36" stop-color="#38BDF8"/>
+      <stop offset="0.68" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#D946EF"/>
+    </radialGradient>
+    <radialGradient id="outer" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 360) rotate(90) scale(300 300)">
+      <stop stop-color="#22D3EE" stop-opacity="0.52"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="700" fill="url(#bg2)"/>
+  <rect width="1200" height="700" fill="url(#outer)"/>
+
+  <circle cx="600" cy="360" r="230" fill="url(#orb)"/>
+  <circle cx="600" cy="360" r="284" stroke="#22D3EE" stroke-opacity="0.28" stroke-width="2"/>
+  <circle cx="600" cy="360" r="330" stroke="#818CF8" stroke-opacity="0.2" stroke-width="2" stroke-dasharray="8 8"/>
+  <circle cx="600" cy="360" r="380" stroke="#D946EF" stroke-opacity="0.16" stroke-width="2" stroke-dasharray="10 10"/>
+
+  <g stroke="#93C5FD" stroke-opacity="0.55" stroke-width="2">
+    <line x1="600" y1="68" x2="600" y2="652"/>
+    <line x1="308" y1="360" x2="892" y2="360"/>
+    <line x1="396" y1="156" x2="804" y2="564"/>
+    <line x1="804" y1="156" x2="396" y2="564"/>
+  </g>
+
+  <g fill="#E0E7FF">
+    <circle cx="600" cy="68" r="8"/>
+    <circle cx="892" cy="360" r="8"/>
+    <circle cx="600" cy="652" r="8"/>
+    <circle cx="308" cy="360" r="8"/>
+    <circle cx="396" cy="156" r="8"/>
+    <circle cx="804" cy="156" r="8"/>
+    <circle cx="804" cy="564" r="8"/>
+    <circle cx="396" cy="564" r="8"/>
+  </g>
+
+  <text x="600" y="364" text-anchor="middle" fill="#F8FAFC" font-size="34" font-family="Arial, sans-serif" letter-spacing="4">
+    AI MEMORY CORE
+  </text>
+</svg>
