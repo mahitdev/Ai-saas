@@ -30,12 +30,15 @@ export default function Home() {
   }
 
   return (
-    <main className="relative min-h-[110svh] overflow-hidden bg-[#05060a] text-white">
+    <main className="relative min-h-[118svh] overflow-hidden bg-[#05060a] text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(34,211,238,0.18),transparent_30%),radial-gradient(circle_at_85%_15%,rgba(59,130,246,0.20),transparent_32%),radial-gradient(circle_at_50%_120%,rgba(168,85,247,0.20),transparent_40%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.03)_1px),linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.03)_1px)] bg-[size:36px_36px]" />
+      <div className="pointer-events-none absolute -left-12 top-24 h-48 w-48 rounded-full bg-cyan-400/30 animate-glow-pulse" />
+      <div className="pointer-events-none absolute right-8 top-40 h-40 w-40 rounded-full bg-indigo-400/30 animate-glow-pulse [animation-delay:0.8s]" />
+      <div className="pointer-events-none absolute bottom-20 left-[35%] h-36 w-36 rounded-full bg-fuchsia-400/20 animate-glow-pulse [animation-delay:1.6s]" />
 
-      <div className="relative mx-auto flex min-h-svh w-full max-w-7xl flex-col justify-center gap-10 px-6 py-12 md:px-10 md:py-16">
-        <section className="grid items-center gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
+      <div className="relative mx-auto flex min-h-svh w-full max-w-[84rem] flex-col justify-center gap-12 px-6 py-14 md:px-10 md:py-20">
+        <section className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
           <div className="space-y-6">
             <Badge className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200 [text-shadow:0_0_10px_rgba(34,211,238,0.6)]">
               AI Voice + Memory Chat
@@ -65,30 +68,30 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid gap-4">
-            <Card className="overflow-hidden border-cyan-500/30 bg-slate-950/80 shadow-[0_0_35px_rgba(34,211,238,0.2)]">
+          <div className="grid gap-4 animate-drift-x">
+            <Card className="overflow-hidden border-cyan-500/30 bg-slate-950/80 shadow-[0_0_35px_rgba(34,211,238,0.2)] transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
               <CardContent className="p-0">
                 <Image
                   src="/hero-neon-chat.svg"
                   alt="Neon AI chat illustration"
                   width={1200}
                   height={800}
-                  className="h-auto w-full"
+                  className="h-auto w-full animate-float-slow"
                   priority
                 />
               </CardContent>
             </Card>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Card className="border-indigo-500/25 bg-slate-950/70">
+              <Card className="border-indigo-500/25 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.02]">
                 <CardContent className="space-y-2 p-4">
-                  <Brain className="size-5 text-indigo-300" />
+                  <Brain className="size-5 text-indigo-300 animate-float-mid" />
                   <p className="text-sm font-medium text-indigo-100">Memory Graph</p>
                   <p className="text-xs text-slate-400">Every session keeps useful context alive for better responses.</p>
                 </CardContent>
               </Card>
-              <Card className="border-emerald-500/25 bg-slate-950/70">
+              <Card className="border-emerald-500/25 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.02]">
                 <CardContent className="space-y-2 p-4">
-                  <ShieldCheck className="size-5 text-emerald-300" />
+                  <ShieldCheck className="size-5 text-emerald-300 animate-float-mid [animation-delay:0.3s]" />
                   <p className="text-sm font-medium text-emerald-100">Secure Access</p>
                   <p className="text-xs text-slate-400">Authenticated workspace with protected APIs and user-owned chats.</p>
                 </CardContent>
@@ -98,7 +101,7 @@ export default function Home() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="border-slate-800 bg-slate-900/60">
+          <Card className="border-slate-800 bg-slate-900/60 transition-transform duration-500 hover:-translate-y-1">
             <CardContent className="space-y-2 p-5">
               <Bot className="size-5 text-cyan-300" />
               <p className="font-medium text-cyan-100 [text-shadow:0_0_12px_rgba(34,211,238,0.5)]">Conversational AI</p>
@@ -106,7 +109,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-800 bg-slate-900/60">
+          <Card className="border-slate-800 bg-slate-900/60 transition-transform duration-500 hover:-translate-y-1">
             <CardContent className="space-y-2 p-5">
               <Mic className="size-5 text-blue-300" />
               <p className="font-medium text-blue-100 [text-shadow:0_0_12px_rgba(96,165,250,0.55)]">Talk Naturally</p>
@@ -114,7 +117,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-800 bg-slate-900/60">
+          <Card className="border-slate-800 bg-slate-900/60 transition-transform duration-500 hover:-translate-y-1">
             <CardContent className="space-y-2 p-5">
               <Sparkles className="size-5 text-fuchsia-300" />
               <p className="font-medium text-fuchsia-100 [text-shadow:0_0_12px_rgba(217,70,239,0.55)]">Smart Memory</p>
@@ -122,7 +125,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-800 bg-slate-900/60">
+          <Card className="border-slate-800 bg-slate-900/60 transition-transform duration-500 hover:-translate-y-1">
             <CardContent className="space-y-2 p-5">
               <Lock className="size-5 text-emerald-300" />
               <p className="font-medium text-emerald-100 [text-shadow:0_0_12px_rgba(52,211,153,0.55)]">Secure by default</p>
@@ -132,14 +135,14 @@ export default function Home() {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-          <Card className="overflow-hidden border-slate-800 bg-slate-950/70">
+          <Card className="overflow-hidden border-slate-800 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
             <CardContent className="p-0">
               <Image
                 src="/hero-memory-orb.svg"
                 alt="AI memory orb visual"
                 width={1200}
                 height={700}
-                className="h-auto w-full"
+                className="h-auto w-full animate-float-slow [animation-delay:0.6s]"
               />
             </CardContent>
           </Card>
