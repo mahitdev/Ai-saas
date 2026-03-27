@@ -250,9 +250,9 @@ export function AiChatDashboard({ user }: { user: User }) {
   }
 
   return (
-    <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] p-4 md:p-8">
+    <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.2),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#111827_100%)] p-4 md:p-8 text-slate-100">
       <div className="mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-[290px_1fr]">
-        <Card className="h-fit border-slate-200/80 bg-white/85 backdrop-blur">
+        <Card className="h-fit border-slate-700/70 bg-slate-900/70 backdrop-blur">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Avatar className="size-10">
@@ -261,10 +261,10 @@ export function AiChatDashboard({ user }: { user: User }) {
               </Avatar>
               <div className="min-w-0">
                 <p className="truncate font-medium">{user.name}</p>
-                <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+                <p className="truncate text-sm text-slate-400">{user.email}</p>
               </div>
             </div>
-            <CardDescription>Your AI memory chat space.</CardDescription>
+            <CardDescription className="text-slate-400">Your AI memory chat space.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button className="w-full" onClick={() => void createConversation()}>
@@ -272,12 +272,12 @@ export function AiChatDashboard({ user }: { user: User }) {
               New Chat
             </Button>
 
-            <ScrollArea className="h-72 rounded-md border p-2">
+            <ScrollArea className="h-72 rounded-md border border-slate-700 bg-slate-950/50 p-2">
               <div className="space-y-2">
                 {loadingConversations ? (
-                  <p className="px-2 py-1 text-sm text-muted-foreground">Loading chats...</p>
+                  <p className="px-2 py-1 text-sm text-slate-400">Loading chats...</p>
                 ) : conversations.length === 0 ? (
-                  <p className="px-2 py-1 text-sm text-muted-foreground">No chats yet.</p>
+                  <p className="px-2 py-1 text-sm text-slate-400">No chats yet.</p>
                 ) : (
                   conversations.map((conversation) => (
                     <div
@@ -285,7 +285,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                       className={`flex items-center gap-2 rounded-md border p-2 ${
                         conversation.id === activeConversationId
                           ? "border-slate-900 bg-slate-900 text-white"
-                          : "bg-white"
+                          : "border-slate-700 bg-slate-900/70"
                       }`}
                     >
                       <button
@@ -294,14 +294,14 @@ export function AiChatDashboard({ user }: { user: User }) {
                         onClick={() => setActiveConversationId(conversation.id)}
                       >
                         <p className="truncate text-sm font-medium">{conversation.title}</p>
-                        <p className={`text-xs ${conversation.id === activeConversationId ? "text-slate-200" : "text-muted-foreground"}`}>
+                        <p className={`text-xs ${conversation.id === activeConversationId ? "text-slate-200" : "text-slate-400"}`}>
                           {new Date(conversation.updatedAt).toLocaleString()}
                         </p>
                       </button>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className={conversation.id === activeConversationId ? "text-white hover:bg-slate-800" : ""}
+                        className={conversation.id === activeConversationId ? "text-white hover:bg-slate-800" : "text-slate-300 hover:bg-slate-800/80"}
                         onClick={() => void deleteConversation(conversation.id)}
                       >
                         <Trash2 className="size-4" />
@@ -328,15 +328,15 @@ export function AiChatDashboard({ user }: { user: User }) {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white/90">
+        <Card className="border-slate-700/70 bg-slate-900/70">
           <CardHeader>
             <div className="flex items-center justify-between gap-2">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <Bot className="size-5 text-sky-600" />
+                  <Bot className="size-5 text-cyan-300" />
                   AI Chat With Memory
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-slate-400">
                   Your assistant remembers your context and prior conversations.
                 </CardDescription>
               </div>
@@ -367,14 +367,14 @@ export function AiChatDashboard({ user }: { user: User }) {
           </CardHeader>
 
           <CardContent className="space-y-3">
-            <ScrollArea className="h-[420px] rounded-lg border bg-slate-50/60 p-4">
+            <ScrollArea className="h-[420px] rounded-lg border border-slate-700 bg-[#050914] p-4">
               {loadingMessages ? (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                <div className="flex h-full items-center justify-center text-sm text-slate-400">
                   <Loader2 className="mr-2 size-4 animate-spin" />
                   Loading messages...
                 </div>
               ) : messages.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                <div className="flex h-full items-center justify-center text-sm text-slate-400">
                   Start chatting. I will remember context.
                 </div>
               ) : (
@@ -384,8 +384,8 @@ export function AiChatDashboard({ user }: { user: User }) {
                       key={message.id}
                       className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                         message.role === "user"
-                          ? "ml-auto bg-slate-900 text-white"
-                          : "bg-white shadow-sm"
+                          ? "ml-auto border border-cyan-400/40 bg-slate-900 text-cyan-100 [text-shadow:0_0_10px_rgba(34,211,238,0.5)]"
+                          : "border border-indigo-400/35 bg-slate-950/80 text-indigo-100 [text-shadow:0_0_10px_rgba(129,140,248,0.5)]"
                       }`}
                     >
                       <p className="whitespace-pre-wrap">{message.content}</p>

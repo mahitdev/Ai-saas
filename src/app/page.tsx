@@ -39,14 +39,14 @@ export default function Home() {
             AI Voice + Memory Chat
           </Badge>
 
-          <h1 className="max-w-4xl text-4xl font-semibold tracking-tight md:text-6xl">
+          <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-slate-100 [text-shadow:0_0_18px_rgba(148,163,184,0.35)] md:text-6xl">
             Your personal AI that
-            <span className="block bg-gradient-to-r from-cyan-300 via-blue-300 to-fuchsia-300 bg-clip-text text-transparent">
+            <span className="block bg-gradient-to-r from-cyan-300 via-blue-300 to-fuchsia-300 bg-clip-text text-transparent [filter:drop-shadow(0_0_14px_rgba(34,211,238,0.45))]">
               remembers every conversation
             </span>
           </h1>
 
-          <p className="max-w-2xl text-base text-slate-300 md:text-lg">
+          <p className="max-w-2xl text-base text-slate-300 [text-shadow:0_0_10px_rgba(15,23,42,0.7)] md:text-lg">
             Chat naturally, talk with voice, and keep long-term context. Built with secure auth and memory-backed conversations.
           </p>
 
