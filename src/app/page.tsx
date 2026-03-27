@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Lock, Rocket, ShieldCheck } from "lucide-react";
+import { ArrowRight, Bot, Lock, Mic, Sparkles } from "lucide-react";
 
 import { authClient } from "@/lib/auth.client";
 import { Badge } from "@/components/ui/badge";
@@ -22,66 +22,80 @@ export default function Home() {
 
   if (isPending) {
     return (
-      <main className="flex min-h-svh items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading workspace...</p>
+      <main className="flex min-h-svh items-center justify-center bg-[#05060a] text-slate-200">
+        <p className="text-sm text-slate-400">Opening your AI space...</p>
       </main>
     );
   }
 
   return (
-    <main className="relative min-h-svh overflow-hidden bg-[radial-gradient(circle_at_15%_10%,_rgba(37,99,235,0.22),_transparent_30%),radial-gradient(circle_at_85%_10%,_rgba(14,165,233,0.2),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)]">
-      <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col justify-center gap-8 p-6 md:p-10">
-        <div className="space-y-4 text-center md:text-left">
-          <Badge variant="secondary" className="px-3 py-1 text-xs">
-            Secure AI Chat With Memory
+    <main className="relative min-h-svh overflow-hidden bg-[#05060a] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(34,211,238,0.18),transparent_30%),radial-gradient(circle_at_85%_15%,rgba(59,130,246,0.20),transparent_32%),radial-gradient(circle_at_50%_120%,rgba(168,85,247,0.20),transparent_40%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.03)_1px),linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.03)_1px)] bg-[size:36px_36px]" />
+
+      <div className="relative mx-auto flex min-h-svh w-full max-w-6xl flex-col justify-center gap-10 px-6 py-12 md:px-10">
+        <section className="space-y-6">
+          <Badge className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
+            AI Voice + Memory Chat
           </Badge>
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-6xl">
-            Chat, talk, and remember
-            <span className="block text-sky-700">with your personal AI assistant</span>
+
+          <h1 className="max-w-4xl text-4xl font-semibold tracking-tight md:text-6xl">
+            Your personal AI that
+            <span className="block bg-gradient-to-r from-cyan-300 via-blue-300 to-fuchsia-300 bg-clip-text text-transparent">
+              remembers every conversation
+            </span>
           </h1>
-          <p className="mx-auto max-w-2xl text-base text-slate-600 md:mx-0 md:text-lg">
-            Sign in to your protected AI chat workspace with persistent conversation memory and voice interaction.
+
+          <p className="max-w-2xl text-base text-slate-300 md:text-lg">
+            Chat naturally, talk with voice, and keep long-term context. Built with secure auth and memory-backed conversations.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
-            <Button asChild size="lg">
-              <Link href="/auth/sign-up">Start Free</Link>
+
+          <div className="flex flex-wrap gap-3">
+            <Button asChild size="lg" className="bg-white text-slate-950 hover:bg-slate-200">
+              <Link href="/auth/sign-up">
+                Start chatting
+                <ArrowRight className="ml-2 size-4" />
+              </Link>
             </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/auth/sign-in">Sign In</Link>
+            <Button asChild size="lg" variant="outline" className="border-slate-700 bg-slate-900/60 text-slate-100 hover:bg-slate-800">
+              <Link href="/auth/sign-in">Sign in</Link>
             </Button>
           </div>
-        </div>
+        </section>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Card className="border-slate-800 bg-slate-900/60">
             <CardContent className="space-y-2 p-5">
-              <ShieldCheck className="size-5 text-indigo-600" />
-              <p className="font-semibold">Auth-Protected API</p>
-              <p className="text-sm text-muted-foreground">Every data route requires a valid user session.</p>
+              <Bot className="size-5 text-cyan-300" />
+              <p className="font-medium">Conversational AI</p>
+              <p className="text-sm text-slate-400">Ask anything and keep context across chats.</p>
             </CardContent>
           </Card>
-          <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
+
+          <Card className="border-slate-800 bg-slate-900/60">
             <CardContent className="space-y-2 p-5">
-              <Lock className="size-5 text-emerald-600" />
-              <p className="font-semibold">Security Headers</p>
-              <p className="text-sm text-muted-foreground">CSP and browser hardening enabled at middleware level.</p>
+              <Mic className="size-5 text-blue-300" />
+              <p className="font-medium">Talk Naturally</p>
+              <p className="text-sm text-slate-400">Voice input and spoken AI responses.</p>
             </CardContent>
           </Card>
-          <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
+
+          <Card className="border-slate-800 bg-slate-900/60">
             <CardContent className="space-y-2 p-5">
-              <Bot className="size-5 text-sky-600" />
-              <p className="font-semibold">Voice + Text Chat</p>
-              <p className="text-sm text-muted-foreground">Talk to your AI with speech input and voice responses.</p>
+              <Sparkles className="size-5 text-fuchsia-300" />
+              <p className="font-medium">Smart Memory</p>
+              <p className="text-sm text-slate-400">Important details are remembered over time.</p>
             </CardContent>
           </Card>
-          <Card className="border-slate-200/80 bg-white/80 backdrop-blur">
+
+          <Card className="border-slate-800 bg-slate-900/60">
             <CardContent className="space-y-2 p-5">
-              <Rocket className="size-5 text-orange-600" />
-              <p className="font-semibold">Memory Conversations</p>
-              <p className="text-sm text-muted-foreground">Your chats persist and the assistant remembers context.</p>
+              <Lock className="size-5 text-emerald-300" />
+              <p className="font-medium">Secure by default</p>
+              <p className="text-sm text-slate-400">Protected auth and hardened API layer.</p>
             </CardContent>
           </Card>
-        </div>
+        </section>
       </div>
     </main>
   );
