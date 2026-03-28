@@ -4,6 +4,11 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { modelLabProfile } from "@/db/schema";
+import {
+  getFallbackModelLabProfile,
+  saveFallbackModelLabProfile,
+} from "@/lib/server/fallback-persistence";
+import { getErrorMessage, isMissingTableError } from "@/lib/server/db-resilience";
 import { getAuthenticatedUser, unauthorized } from "@/lib/server/session";
 
 const updateModelLabSchema = z.object({
@@ -71,19 +76,28 @@ export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorized();
 
-  const profile = await getOrCreateProfile(user.id);
+  try {
+    const profile = await getOrCreateProfile(user.id);
 
-  return NextResponse.json({
-    profile: {
-      id: profile.id,
-      systemPrompt: profile.systemPrompt,
-      engine: profile.engine,
-      styleProfileEnabled: profile.styleProfileEnabled,
-      knowledgeFiles: parseStoredList(profile.knowledgeFiles),
-      playbooks: parseStoredList(profile.playbooks),
-      updatedAt: profile.updatedAt,
-    },
-  });
+    return NextResponse.json({
+      profile: {
+        id: profile.id,
+        systemPrompt: profile.systemPrompt,
+        engine: profile.engine,
+        styleProfileEnabled: profile.styleProfileEnabled,
+        knowledgeFiles: parseStoredList(profile.knowledgeFiles),
+        playbooks: parseStoredList(profile.playbooks),
+        updatedAt: profile.updatedAt,
+      },
+      storage: "database",
+    });
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    }
+
+    return NextResponse.json({ profile: getFallbackModelLabProfile(user.id), storage: "fallback_memory" });
+  }
 }
 
 export async function PUT(request: Request) {
@@ -96,30 +110,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Invalid model lab payload" }, { status: 400 });
   }
 
-  const [updated] = await db
-    .update(modelLabProfile)
-    .set({
-      systemPrompt: parsed.data.systemPrompt,
-      engine: parsed.data.engine,
-      styleProfileEnabled: parsed.data.styleProfileEnabled,
-      knowledgeFiles: JSON.stringify(parsed.data.knowledgeFiles),
-      playbooks: JSON.stringify(parsed.data.playbooks),
-      updatedAt: new Date(),
-    })
-    .where(eq(modelLabProfile.userId, user.id))
-    .returning({
-      id: modelLabProfile.id,
-      systemPrompt: modelLabProfile.systemPrompt,
-      engine: modelLabProfile.engine,
-      styleProfileEnabled: modelLabProfile.styleProfileEnabled,
-      knowledgeFiles: modelLabProfile.knowledgeFiles,
-      playbooks: modelLabProfile.playbooks,
-      updatedAt: modelLabProfile.updatedAt,
-    });
-
-  if (!updated) {
-    const profile = await getOrCreateProfile(user.id);
-    const [createdOrUpdated] = await db
+  try {
+    const [updated] = await db
       .update(modelLabProfile)
       .set({
         systemPrompt: parsed.data.systemPrompt,
@@ -129,7 +121,7 @@ export async function PUT(request: Request) {
         playbooks: JSON.stringify(parsed.data.playbooks),
         updatedAt: new Date(),
       })
-      .where(and(eq(modelLabProfile.id, profile.id), eq(modelLabProfile.userId, user.id)))
+      .where(eq(modelLabProfile.userId, user.id))
       .returning({
         id: modelLabProfile.id,
         systemPrompt: modelLabProfile.systemPrompt,
@@ -140,20 +132,53 @@ export async function PUT(request: Request) {
         updatedAt: modelLabProfile.updatedAt,
       });
 
+    if (!updated) {
+      const profile = await getOrCreateProfile(user.id);
+      const [createdOrUpdated] = await db
+        .update(modelLabProfile)
+        .set({
+          systemPrompt: parsed.data.systemPrompt,
+          engine: parsed.data.engine,
+          styleProfileEnabled: parsed.data.styleProfileEnabled,
+          knowledgeFiles: JSON.stringify(parsed.data.knowledgeFiles),
+          playbooks: JSON.stringify(parsed.data.playbooks),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(modelLabProfile.id, profile.id), eq(modelLabProfile.userId, user.id)))
+        .returning({
+          id: modelLabProfile.id,
+          systemPrompt: modelLabProfile.systemPrompt,
+          engine: modelLabProfile.engine,
+          styleProfileEnabled: modelLabProfile.styleProfileEnabled,
+          knowledgeFiles: modelLabProfile.knowledgeFiles,
+          playbooks: modelLabProfile.playbooks,
+          updatedAt: modelLabProfile.updatedAt,
+        });
+
+      return NextResponse.json({
+        profile: {
+          ...createdOrUpdated,
+          knowledgeFiles: parseStoredList(createdOrUpdated.knowledgeFiles),
+          playbooks: parseStoredList(createdOrUpdated.playbooks),
+        },
+        storage: "database",
+      });
+    }
+
     return NextResponse.json({
       profile: {
-        ...createdOrUpdated,
-        knowledgeFiles: parseStoredList(createdOrUpdated.knowledgeFiles),
-        playbooks: parseStoredList(createdOrUpdated.playbooks),
+        ...updated,
+        knowledgeFiles: parseStoredList(updated.knowledgeFiles),
+        playbooks: parseStoredList(updated.playbooks),
       },
+      storage: "database",
     });
-  }
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    }
 
-  return NextResponse.json({
-    profile: {
-      ...updated,
-      knowledgeFiles: parseStoredList(updated.knowledgeFiles),
-      playbooks: parseStoredList(updated.playbooks),
-    },
-  });
+    const profile = saveFallbackModelLabProfile(user.id, parsed.data);
+    return NextResponse.json({ profile, storage: "fallback_memory" });
+  }
 }

@@ -4,6 +4,12 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { libraryAsset, libraryCollection } from "@/db/schema";
+import {
+  addFallbackAsset,
+  ensureFallbackCollection,
+  getFallbackLibrary,
+} from "@/lib/server/fallback-persistence";
+import { getErrorMessage, isMissingTableError } from "@/lib/server/db-resilience";
 import { getAuthenticatedUser, unauthorized } from "@/lib/server/session";
 
 const createAssetSchema = z.object({
@@ -19,49 +25,67 @@ function normalizeTags(input?: string[]) {
   return Array.from(new Set(input.map((item) => item.toLowerCase()))).join(",");
 }
 
+function parseTags(raw: string) {
+  return raw
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorized();
 
-  const [collections, assets] = await Promise.all([
-    db
-      .select({ id: libraryCollection.id, name: libraryCollection.name })
-      .from(libraryCollection)
-      .where(eq(libraryCollection.userId, user.id)),
-    db
-      .select({
-        id: libraryAsset.id,
-        title: libraryAsset.title,
-        content: libraryAsset.content,
-        collection: libraryAsset.collection,
-        source: libraryAsset.source,
-        tags: libraryAsset.tags,
-        createdAt: libraryAsset.createdAt,
-        updatedAt: libraryAsset.updatedAt,
-      })
-      .from(libraryAsset)
-      .where(eq(libraryAsset.userId, user.id))
-      .orderBy(desc(libraryAsset.updatedAt)),
-  ]);
+  try {
+    const [collections, assets] = await Promise.all([
+      db
+        .select({ id: libraryCollection.id, name: libraryCollection.name })
+        .from(libraryCollection)
+        .where(eq(libraryCollection.userId, user.id)),
+      db
+        .select({
+          id: libraryAsset.id,
+          title: libraryAsset.title,
+          content: libraryAsset.content,
+          collection: libraryAsset.collection,
+          source: libraryAsset.source,
+          tags: libraryAsset.tags,
+          createdAt: libraryAsset.createdAt,
+          updatedAt: libraryAsset.updatedAt,
+        })
+        .from(libraryAsset)
+        .where(eq(libraryAsset.userId, user.id))
+        .orderBy(desc(libraryAsset.updatedAt)),
+    ]);
 
-  const assetCollections = new Set(assets.map((asset) => asset.collection));
-  for (const collection of collections) {
-    assetCollections.add(collection.name);
-  }
-  if (assetCollections.size === 0) {
-    assetCollections.add("General");
-  }
+    const assetCollections = new Set(assets.map((asset) => asset.collection));
+    for (const collection of collections) {
+      assetCollections.add(collection.name);
+    }
+    if (assetCollections.size === 0) {
+      assetCollections.add("General");
+    }
 
-  return NextResponse.json({
-    collections: Array.from(assetCollections),
-    assets: assets.map((asset) => ({
-      ...asset,
-      tags: asset.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-    })),
-  });
+    return NextResponse.json({
+      collections: Array.from(assetCollections),
+      assets: assets.map((asset) => ({
+        ...asset,
+        tags: parseTags(asset.tags),
+      })),
+      storage: "database",
+    });
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    }
+
+    const fallback = getFallbackLibrary(user.id);
+    return NextResponse.json({
+      collections: fallback.collections,
+      assets: fallback.assets,
+      storage: "fallback_memory",
+    });
+  }
 }
 
 export async function POST(request: Request) {
@@ -76,52 +100,72 @@ export async function POST(request: Request) {
 
   const title = parsed.data.title?.trim() || parsed.data.content.slice(0, 60);
 
-  const [existingCollection] = await db
-    .select({ id: libraryCollection.id })
-    .from(libraryCollection)
-    .where(and(eq(libraryCollection.userId, user.id), eq(libraryCollection.name, parsed.data.collection)))
-    .limit(1);
+  try {
+    const [existingCollection] = await db
+      .select({ id: libraryCollection.id })
+      .from(libraryCollection)
+      .where(and(eq(libraryCollection.userId, user.id), eq(libraryCollection.name, parsed.data.collection)))
+      .limit(1);
 
-  if (!existingCollection) {
-    await db.insert(libraryCollection).values({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      name: parsed.data.collection,
-    });
-  }
+    if (!existingCollection) {
+      await db.insert(libraryCollection).values({
+        id: crypto.randomUUID(),
+        userId: user.id,
+        name: parsed.data.collection,
+      });
+    }
 
-  const [asset] = await db
-    .insert(libraryAsset)
-    .values({
+    const [asset] = await db
+      .insert(libraryAsset)
+      .values({
+        id: crypto.randomUUID(),
+        userId: user.id,
+        title,
+        content: parsed.data.content,
+        collection: parsed.data.collection,
+        source: parsed.data.source,
+        tags: normalizeTags(parsed.data.tags),
+      })
+      .returning({
+        id: libraryAsset.id,
+        title: libraryAsset.title,
+        content: libraryAsset.content,
+        collection: libraryAsset.collection,
+        source: libraryAsset.source,
+        tags: libraryAsset.tags,
+        createdAt: libraryAsset.createdAt,
+        updatedAt: libraryAsset.updatedAt,
+      });
+
+    return NextResponse.json(
+      {
+        asset: {
+          ...asset,
+          tags: parseTags(asset.tags),
+        },
+        storage: "database",
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    }
+
+    ensureFallbackCollection(user.id, parsed.data.collection);
+    const now = new Date().toISOString();
+    const fallbackAsset = addFallbackAsset({
       id: crypto.randomUUID(),
       userId: user.id,
       title,
       content: parsed.data.content,
       collection: parsed.data.collection,
       source: parsed.data.source,
-      tags: normalizeTags(parsed.data.tags),
-    })
-    .returning({
-      id: libraryAsset.id,
-      title: libraryAsset.title,
-      content: libraryAsset.content,
-      collection: libraryAsset.collection,
-      source: libraryAsset.source,
-      tags: libraryAsset.tags,
-      createdAt: libraryAsset.createdAt,
-      updatedAt: libraryAsset.updatedAt,
+      tags: parseTags(normalizeTags(parsed.data.tags)),
+      createdAt: now,
+      updatedAt: now,
     });
 
-  return NextResponse.json(
-    {
-      asset: {
-        ...asset,
-        tags: asset.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
-      },
-    },
-    { status: 201 },
-  );
+    return NextResponse.json({ asset: fallbackAsset, storage: "fallback_memory" }, { status: 201 });
+  }
 }

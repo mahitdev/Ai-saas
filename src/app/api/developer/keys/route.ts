@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { developerApiKey } from "@/db/schema";
+import { addFallbackApiKey, getFallbackApiKeys } from "@/lib/server/fallback-persistence";
+import { getErrorMessage, isMissingTableError } from "@/lib/server/db-resilience";
 import { getAuthenticatedUser, unauthorized } from "@/lib/server/session";
 
 const createKeySchema = z.object({
@@ -19,21 +21,29 @@ export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorized();
 
-  const keys = await db
-    .select({
-      id: developerApiKey.id,
-      label: developerApiKey.label,
-      key: developerApiKey.apiKey,
-      limit: developerApiKey.limit,
-      active: developerApiKey.active,
-      createdAt: developerApiKey.createdAt,
-      updatedAt: developerApiKey.updatedAt,
-    })
-    .from(developerApiKey)
-    .where(eq(developerApiKey.userId, user.id))
-    .orderBy(desc(developerApiKey.updatedAt));
+  try {
+    const keys = await db
+      .select({
+        id: developerApiKey.id,
+        label: developerApiKey.label,
+        key: developerApiKey.apiKey,
+        limit: developerApiKey.limit,
+        active: developerApiKey.active,
+        createdAt: developerApiKey.createdAt,
+        updatedAt: developerApiKey.updatedAt,
+      })
+      .from(developerApiKey)
+      .where(eq(developerApiKey.userId, user.id))
+      .orderBy(desc(developerApiKey.updatedAt));
 
-  return NextResponse.json({ keys });
+    return NextResponse.json({ keys, storage: "database" });
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    }
+
+    return NextResponse.json({ keys: getFallbackApiKeys(user.id), storage: "fallback_memory" });
+  }
 }
 
 export async function POST(request: Request) {
@@ -46,25 +56,45 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid API key payload" }, { status: 400 });
   }
 
-  const [key] = await db
-    .insert(developerApiKey)
-    .values({
+  try {
+    const [key] = await db
+      .insert(developerApiKey)
+      .values({
+        id: crypto.randomUUID(),
+        userId: user.id,
+        label: parsed.data.label,
+        apiKey: createApiKey(),
+        limit: parsed.data.limit,
+        active: true,
+      })
+      .returning({
+        id: developerApiKey.id,
+        label: developerApiKey.label,
+        key: developerApiKey.apiKey,
+        limit: developerApiKey.limit,
+        active: developerApiKey.active,
+        createdAt: developerApiKey.createdAt,
+        updatedAt: developerApiKey.updatedAt,
+      });
+
+    return NextResponse.json({ key, storage: "database" }, { status: 201 });
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    }
+
+    const now = new Date().toISOString();
+    const key = addFallbackApiKey({
       id: crypto.randomUUID(),
       userId: user.id,
       label: parsed.data.label,
-      apiKey: createApiKey(),
+      key: createApiKey(),
       limit: parsed.data.limit,
       active: true,
-    })
-    .returning({
-      id: developerApiKey.id,
-      label: developerApiKey.label,
-      key: developerApiKey.apiKey,
-      limit: developerApiKey.limit,
-      active: developerApiKey.active,
-      createdAt: developerApiKey.createdAt,
-      updatedAt: developerApiKey.updatedAt,
+      createdAt: now,
+      updatedAt: now,
     });
 
-  return NextResponse.json({ key }, { status: 201 });
+    return NextResponse.json({ key, storage: "fallback_memory" }, { status: 201 });
+  }
 }
