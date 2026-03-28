@@ -920,9 +920,9 @@ export function AiChatDashboard({ user }: { user: User }) {
           </CardHeader>
 
           <CardContent className="space-y-5">
-            <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
+            <div className="space-y-4">
               <div className="space-y-4">
-                <ScrollArea className="h-[420px] rounded-lg border border-slate-700 bg-[#050914] p-4">
+                <ScrollArea className="h-[560px] rounded-lg border border-slate-700 bg-[#050914] p-4">
                   {loadingMessages ? (
                     <div className="flex h-full items-center justify-center text-sm text-slate-400">
                       <Loader2 className="mr-2 size-4 animate-spin" />
@@ -937,7 +937,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                       {messages.map((message) => (
                         <div
                           key={message.id}
-                          className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                          className={`max-w-[92%] rounded-lg px-3 py-2 text-sm ${
                             message.role === "user"
                               ? "ml-auto border border-cyan-400/40 bg-slate-900 text-cyan-100 [text-shadow:0_0_10px_rgba(34,211,238,0.5)]"
                               : "border border-indigo-400/35 bg-slate-950/80 text-indigo-100 [text-shadow:0_0_10px_rgba(129,140,248,0.5)]"
@@ -1038,7 +1038,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                   <p className="text-xs font-semibold tracking-wide text-cyan-300 uppercase">Section 1: Chat Info</p>
                   <p className="mt-2 text-sm text-slate-300">Active chat</p>
@@ -1072,7 +1072,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                 )}
 
                 {detectedIntent === "budget_analysis" ? (
-                  <div className="rounded-lg border border-fuchsia-500/35 bg-slate-950/70 p-4">
+                  <div className="rounded-lg border border-fuchsia-500/35 bg-slate-950/70 p-4 md:col-span-2 xl:col-span-2">
                     <p className="text-xs font-semibold tracking-wide text-fuchsia-300 uppercase">Intent-Driven Budget Grid</p>
                     <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-200">
                       <div className="rounded-md border border-slate-700 bg-slate-900 p-2">Revenue: $120,000</div>
