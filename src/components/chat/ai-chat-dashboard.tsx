@@ -127,6 +127,7 @@ export function AiChatDashboard({ user }: { user: User }) {
     [conversations, activeConversationId],
   );
   const workspacePages = [
+    { href: "/dashboard/chat", title: "AI Chat", description: "Dedicated chat workspace" },
     { href: "/dashboard/comparison", title: "Comparison", description: "Compare model outputs" },
     { href: "/dashboard/mind-map", title: "Mind Map", description: "Explore topic graph" },
     { href: "/dashboard/logic-builder", title: "Logic Builder", description: "Build AI workflows" },
@@ -491,9 +492,9 @@ export function AiChatDashboard({ user }: { user: User }) {
                 variant="outline"
                 className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
               >
-                <a href="/dashboard">
+                <a href="/dashboard/chat">
                   <Bot className="mr-2 size-4" />
-                  Dashboard
+                  AI Chat
                 </a>
               </Button>
               <Button
