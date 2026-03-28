@@ -1,10 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+
+type LibraryAsset = {
+  id: string;
+  title: string;
+  content: string;
+  collection: string;
+  source: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
 
 function autoTags(text: string) {
   const lower = text.toLowerCase();
@@ -20,11 +31,12 @@ function autoTags(text: string) {
 }
 
 export function LibraryPage() {
-  const [collections, setCollections] = useState(["Project Alpha", "Social Media Q3"]);
+  const [collections, setCollections] = useState<string[]>(["General"]);
   const [newCollection, setNewCollection] = useState("");
-  const [activeCollection, setActiveCollection] = useState("Project Alpha");
+  const [activeCollection, setActiveCollection] = useState("General");
   const [assetText, setAssetText] = useState("");
-  const [assets, setAssets] = useState<Array<{ id: string; collection: string; content: string; tags: string[] }>>([]);
+  const [assets, setAssets] = useState<LibraryAsset[]>([]);
+  const [status, setStatus] = useState("Loading library...");
   const [versionA, setVersionA] = useState("");
   const [versionB, setVersionB] = useState("");
 
@@ -33,6 +45,81 @@ export function LibraryPage() {
     const b = versionB.split("\n");
     return b.filter((line) => !a.includes(line)).slice(0, 8);
   }, [versionA, versionB]);
+
+  useEffect(() => {
+    async function loadLibrary() {
+      const response = await fetch("/api/library", { cache: "no-store" });
+      const payload = (await response.json().catch(() => null)) as
+        | { collections?: string[]; assets?: LibraryAsset[]; error?: string }
+        | null;
+
+      if (!response.ok || !payload) {
+        setStatus(payload?.error ?? "Failed to load library data.");
+        return;
+      }
+
+      const nextCollections = payload.collections && payload.collections.length > 0 ? payload.collections : ["General"];
+      setCollections(nextCollections);
+      setActiveCollection((current) => (nextCollections.includes(current) ? current : nextCollections[0]));
+      setAssets(payload.assets ?? []);
+      setStatus("Library synced.");
+    }
+
+    void loadLibrary();
+  }, []);
+
+  async function handleCreateCollection() {
+    if (!newCollection.trim()) return;
+
+    const response = await fetch("/api/library/collections", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: newCollection.trim() }),
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | { collection?: { name: string }; error?: string }
+      | null;
+
+    if (!response.ok || !payload?.collection) {
+      setStatus(payload?.error ?? "Failed to create collection.");
+      return;
+    }
+
+    setCollections((prev) => (prev.includes(payload.collection!.name) ? prev : [...prev, payload.collection!.name]));
+    setActiveCollection(payload.collection.name);
+    setNewCollection("");
+    setStatus(`Collection ${payload.collection.name} ready.`);
+  }
+
+  async function handleSaveAsset() {
+    if (!assetText.trim()) return;
+
+    const response = await fetch("/api/library", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        content: assetText.trim(),
+        title: assetText.trim().slice(0, 60),
+        collection: activeCollection,
+        source: "dashboard",
+        tags: autoTags(assetText),
+      }),
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | { asset?: LibraryAsset; error?: string }
+      | null;
+
+    if (!response.ok || !payload?.asset) {
+      setStatus(payload?.error ?? "Failed to save asset.");
+      return;
+    }
+
+    setAssets((prev) => [payload.asset!, ...prev]);
+    setAssetText("");
+    setStatus(`Saved asset to ${payload.asset.collection}.`);
+  }
 
   return (
     <main className="min-h-svh bg-[linear-gradient(180deg,#020617_0%,#111827_100%)] p-4 text-slate-100 md:p-8">
@@ -65,17 +152,10 @@ export function LibraryPage() {
               placeholder="New folder name..."
               className="border-slate-700 bg-slate-900 text-slate-100"
             />
-            <Button
-              className="w-full bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25"
-              onClick={() => {
-                if (!newCollection.trim()) return;
-                setCollections((prev) => [...prev, newCollection.trim()]);
-                setActiveCollection(newCollection.trim());
-                setNewCollection("");
-              }}
-            >
+            <Button className="w-full bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => void handleCreateCollection()}>
               Add Collection
             </Button>
+            <p className="text-xs text-slate-400">{status}</p>
           </CardContent>
         </Card>
 
@@ -92,17 +172,7 @@ export function LibraryPage() {
                 placeholder="Paste AI output or prompt here..."
                 className="border-slate-700 bg-slate-900 text-slate-100"
               />
-              <Button
-                className="bg-indigo-500/15 text-indigo-100 hover:bg-indigo-500/25"
-                onClick={() => {
-                  if (!assetText.trim()) return;
-                  setAssets((prev) => [
-                    { id: crypto.randomUUID(), collection: activeCollection, content: assetText.trim(), tags: autoTags(assetText) },
-                    ...prev,
-                  ]);
-                  setAssetText("");
-                }}
-              >
+              <Button className="bg-indigo-500/15 text-indigo-100 hover:bg-indigo-500/25" onClick={() => void handleSaveAsset()}>
                 Save Asset to {activeCollection}
               </Button>
 
@@ -111,10 +181,11 @@ export function LibraryPage() {
                   .filter((asset) => asset.collection === activeCollection)
                   .map((asset) => (
                     <div key={asset.id} className="rounded-md border border-slate-700 bg-slate-900/70 p-2">
+                      <p className="text-xs text-slate-400">{new Date(asset.createdAt).toLocaleString()}</p>
                       <p className="line-clamp-3 text-sm text-slate-200">{asset.content}</p>
                       <div className="mt-2 flex flex-wrap gap-1">
                         {asset.tags.map((tag) => (
-                          <span key={tag} className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] text-fuchsia-200">
+                          <span key={`${asset.id}-${tag}`} className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] text-fuchsia-200">
                             {tag}
                           </span>
                         ))}
@@ -146,4 +217,3 @@ export function LibraryPage() {
     </main>
   );
 }
-

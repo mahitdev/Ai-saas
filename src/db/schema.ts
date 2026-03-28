@@ -1,5 +1,5 @@
 
-import { pgEnum, pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgEnum, pgTable, text, timestamp, boolean, index, integer } from "drizzle-orm/pg-core";
 
 
 export const user = pgTable("user", {
@@ -196,6 +196,7 @@ export const libraryAsset = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     content: text("content").notNull(),
+    collection: text("collection").notNull().default("General"),
     source: text("source").notNull().default("manual"),
     tags: text("tags").notNull().default("general"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -205,6 +206,23 @@ export const libraryAsset = pgTable(
       .notNull(),
   },
   (table) => [index("library_asset_userId_idx").on(table.userId)],
+);
+
+export const libraryCollection = pgTable(
+  "library_collection",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("library_collection_userId_idx").on(table.userId)],
 );
 
 export const voiceAction = pgTable(
@@ -266,4 +284,61 @@ export const weeklyDigest = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("weekly_digest_userId_idx").on(table.userId)],
+);
+
+export const developerApiKey = pgTable(
+  "developer_api_key",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    label: text("label").notNull().default("Primary"),
+    apiKey: text("api_key").notNull(),
+    limit: integer("limit").notNull().default(5000),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("developer_api_key_userId_idx").on(table.userId)],
+);
+
+export const developerWebhookLog = pgTable(
+  "developer_webhook_log",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    event: text("event").notNull(),
+    statusCode: integer("status_code").notNull().default(200),
+    detail: text("detail"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("developer_webhook_log_userId_idx").on(table.userId)],
+);
+
+export const modelLabProfile = pgTable(
+  "model_lab_profile",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    systemPrompt: text("system_prompt").notNull().default("Always respond in a structured, practical format."),
+    engine: text("engine").notNull().default("flash"),
+    styleProfileEnabled: boolean("style_profile_enabled").notNull().default(false),
+    knowledgeFiles: text("knowledge_files").notNull().default("[]"),
+    playbooks: text("playbooks").notNull().default("[]"),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("model_lab_profile_userId_idx").on(table.userId)],
 );

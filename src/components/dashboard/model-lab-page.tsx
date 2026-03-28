@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+type ModelLabProfile = {
+  id: string;
+  systemPrompt: string;
+  engine: "flash" | "pro";
+  styleProfileEnabled: boolean;
+  knowledgeFiles: string[];
+  playbooks: string[];
+  updatedAt: string;
+};
 
 export function ModelLabPage() {
   const [systemPrompt, setSystemPrompt] = useState("Always respond in a structured, practical format.");
@@ -14,6 +24,64 @@ export function ModelLabPage() {
   const [domainInput, setDomainInput] = useState("Review this policy document for risk and required actions.");
   const [domainOutput, setDomainOutput] = useState("");
   const [playbooks, setPlaybooks] = useState<string[]>([]);
+  const [status, setStatus] = useState("Loading Model Lab profile...");
+
+  useEffect(() => {
+    async function loadProfile() {
+      const response = await fetch("/api/model-lab", { cache: "no-store" });
+      const payload = (await response.json().catch(() => null)) as { profile?: ModelLabProfile; error?: string } | null;
+
+      if (!response.ok || !payload?.profile) {
+        setStatus(payload?.error ?? "Failed to load profile.");
+        return;
+      }
+
+      setSystemPrompt(payload.profile.systemPrompt);
+      setEngine(payload.profile.engine);
+      setStyleProfileEnabled(payload.profile.styleProfileEnabled);
+      setKnowledgeFiles(payload.profile.knowledgeFiles);
+      setPlaybooks(payload.profile.playbooks);
+      setStatus("Model Lab synced.");
+    }
+
+    void loadProfile();
+  }, []);
+
+  async function persistProfile(next: {
+    systemPrompt?: string;
+    engine?: "flash" | "pro";
+    styleProfileEnabled?: boolean;
+    knowledgeFiles?: string[];
+    playbooks?: string[];
+  }) {
+    const payload = {
+      systemPrompt: next.systemPrompt ?? systemPrompt,
+      engine: next.engine ?? engine,
+      styleProfileEnabled: next.styleProfileEnabled ?? styleProfileEnabled,
+      knowledgeFiles: next.knowledgeFiles ?? knowledgeFiles,
+      playbooks: next.playbooks ?? playbooks,
+    };
+
+    const response = await fetch("/api/model-lab", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const body = (await response.json().catch(() => null)) as { profile?: ModelLabProfile; error?: string } | null;
+
+    if (!response.ok || !body?.profile) {
+      setStatus(body?.error ?? "Failed to save model lab changes.");
+      return;
+    }
+
+    setSystemPrompt(body.profile.systemPrompt);
+    setEngine(body.profile.engine);
+    setStyleProfileEnabled(body.profile.styleProfileEnabled);
+    setKnowledgeFiles(body.profile.knowledgeFiles);
+    setPlaybooks(body.profile.playbooks);
+    setStatus(`Saved at ${new Date(body.profile.updatedAt).toLocaleTimeString()}`);
+  }
 
   async function runIndustryTemplate() {
     const response = await fetch("/api/vertical/templates", {
@@ -41,7 +109,9 @@ export function ModelLabPage() {
                 onChange={(event) => setSystemPrompt(event.target.value)}
                 className="min-h-40 w-full rounded-md border border-slate-700 bg-slate-900 p-2 text-sm text-slate-100"
               />
-              <Button className="bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25">Save Global Rules</Button>
+              <Button className="bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => void persistProfile({ systemPrompt })}>
+                Save Global Rules
+              </Button>
             </div>
 
             <div className="space-y-3">
@@ -50,14 +120,20 @@ export function ModelLabPage() {
                 <Button
                   variant={engine === "flash" ? "default" : "outline"}
                   className={engine === "flash" ? "bg-indigo-500/20 text-indigo-100" : "border-slate-700 bg-slate-900 text-slate-200"}
-                  onClick={() => setEngine("flash")}
+                  onClick={() => {
+                    setEngine("flash");
+                    void persistProfile({ engine: "flash" });
+                  }}
                 >
                   Flash (Speed)
                 </Button>
                 <Button
                   variant={engine === "pro" ? "default" : "outline"}
                   className={engine === "pro" ? "bg-fuchsia-500/20 text-fuchsia-100" : "border-slate-700 bg-slate-900 text-slate-200"}
-                  onClick={() => setEngine("pro")}
+                  onClick={() => {
+                    setEngine("pro");
+                    void persistProfile({ engine: "pro" });
+                  }}
                 >
                   Pro (Deep Logic)
                 </Button>
@@ -65,10 +141,15 @@ export function ModelLabPage() {
               <Button
                 variant={styleProfileEnabled ? "default" : "outline"}
                 className={styleProfileEnabled ? "bg-emerald-500/20 text-emerald-100" : "border-slate-700 bg-slate-900 text-slate-200"}
-                onClick={() => setStyleProfileEnabled((current) => !current)}
+                onClick={() => {
+                  const next = !styleProfileEnabled;
+                  setStyleProfileEnabled(next);
+                  void persistProfile({ styleProfileEnabled: next });
+                }}
               >
                 {styleProfileEnabled ? "Style Profile: ON" : "Style Profile: OFF"}
               </Button>
+              <p className="text-xs text-slate-400">{status}</p>
             </div>
           </CardContent>
         </Card>
@@ -88,8 +169,12 @@ export function ModelLabPage() {
                 onChange={(event) => {
                   const files = Array.from(event.target.files ?? []);
                   if (files.length === 0) return;
-                  setKnowledgeFiles((prev) => [...files.map((file) => file.name), ...prev]);
-                  setPlaybooks((prev) => [...files.map((file) => `Playbook: ${file.name}`), ...prev]);
+                  const names = files.map((file) => file.name);
+                  const nextFiles = [...names, ...knowledgeFiles];
+                  const nextPlaybooks = [...names.map((name) => `Playbook: ${name}`), ...playbooks];
+                  setKnowledgeFiles(nextFiles);
+                  setPlaybooks(nextPlaybooks);
+                  void persistProfile({ knowledgeFiles: nextFiles, playbooks: nextPlaybooks });
                 }}
               />
               Drag/drop docs here or click to upload
