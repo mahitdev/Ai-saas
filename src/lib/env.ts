@@ -7,6 +7,8 @@ const envSchema = z.object({
   ALLOWED_ORIGINS: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  CRON_SECRET: z.string().optional(),
+  VOICE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -16,4 +18,6 @@ export const env = envSchema.parse({
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  CRON_SECRET: process.env.CRON_SECRET,
+  VOICE_WEBHOOK_SECRET: process.env.VOICE_WEBHOOK_SECRET,
 });

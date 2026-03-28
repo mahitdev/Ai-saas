@@ -155,6 +155,9 @@ export function AiChatDashboard({ user }: { user: User }) {
   }, [messages]);
   const workspacePages = [
     { href: "/dashboard/ubiquity", title: "Ubiquity", description: "Extensions and plugins" },
+    { href: "/dashboard/voice", title: "Voice Actions", description: "Phone and widget commands" },
+    { href: "/dashboard/semantic", title: "Semantic Layer", description: "Business formula mapping" },
+    { href: "/dashboard/reports", title: "Weekly Digest", description: "Offline reports and delivery" },
     { href: "/dashboard/library", title: "Library", description: "Assets, versions, tagging" },
     { href: "/dashboard/analytics", title: "Analytics", description: "Efficiency and trends" },
     { href: "/dashboard/developer", title: "API & Developer", description: "Keys and sandbox" },
@@ -567,6 +570,36 @@ export function AiChatDashboard({ user }: { user: User }) {
                 <a href="/dashboard/ubiquity">
                   <Sparkles className="mr-2 size-4" />
                   Ubiquity Layer
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/voice">
+                  <Mic className="mr-2 size-4" />
+                  Voice Actions
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/semantic">
+                  <Brain className="mr-2 size-4" />
+                  Semantic Layer
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/reports">
+                  <Cpu className="mr-2 size-4" />
+                  Weekly Digest
                 </a>
               </Button>
               <Button

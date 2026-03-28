@@ -186,3 +186,84 @@ export const aiMemory = pgTable(
   },
   (table) => [index("ai_memory_userId_idx").on(table.userId)],
 );
+
+export const libraryAsset = pgTable(
+  "library_asset",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    source: text("source").notNull().default("manual"),
+    tags: text("tags").notNull().default("general"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("library_asset_userId_idx").on(table.userId)],
+);
+
+export const voiceAction = pgTable(
+  "voice_action",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    source: text("source").notNull().default("widget"),
+    transcript: text("transcript").notNull(),
+    actionType: text("action_type").notNull(),
+    actionPayload: text("action_payload").notNull().default("{}"),
+    status: text("status").notNull().default("completed"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("voice_action_userId_idx").on(table.userId)],
+);
+
+export const semanticMetric = pgTable(
+  "semantic_metric",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    metricKey: text("metric_key").notNull(),
+    displayName: text("display_name").notNull(),
+    formula: text("formula").notNull(),
+    description: text("description"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("semantic_metric_userId_idx").on(table.userId),
+    index("semantic_metric_metricKey_idx").on(table.metricKey),
+  ],
+);
+
+export const weeklyDigest = pgTable(
+  "weekly_digest",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    weekStartIso: text("week_start_iso").notNull(),
+    weekEndIso: text("week_end_iso").notNull(),
+    hoursSaved: text("hours_saved").notNull().default("0"),
+    topTopics: text("top_topics").notNull().default(""),
+    prediction: text("prediction").notNull().default(""),
+    digestBody: text("digest_body").notNull(),
+    deliveryMode: text("delivery_mode").notNull().default("in_app"),
+    deliveredTo: text("delivered_to"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("weekly_digest_userId_idx").on(table.userId)],
+);
