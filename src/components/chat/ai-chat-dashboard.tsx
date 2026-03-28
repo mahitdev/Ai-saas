@@ -154,6 +154,7 @@ export function AiChatDashboard({ user }: { user: User }) {
       .map(([word, count]) => ({ word, count }));
   }, [messages]);
   const workspacePages = [
+    { href: "/dashboard/ubiquity", title: "Ubiquity", description: "Extensions and plugins" },
     { href: "/dashboard/library", title: "Library", description: "Assets, versions, tagging" },
     { href: "/dashboard/analytics", title: "Analytics", description: "Efficiency and trends" },
     { href: "/dashboard/developer", title: "API & Developer", description: "Keys and sandbox" },
@@ -556,6 +557,16 @@ export function AiChatDashboard({ user }: { user: User }) {
                 <a href="/dashboard">
                   <Bot className="mr-2 size-4" />
                   Dashboard
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/ubiquity">
+                  <Sparkles className="mr-2 size-4" />
+                  Ubiquity Layer
                 </a>
               </Button>
               <Button

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "MyAI Quick Send",
+  "version": "1.0.0",
+  "description": "Highlight text on any site and send it to MyAI for analysis.",
+  "permissions": ["contextMenus", "activeTab", "storage", "scripting"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "MyAI Quick Send"
+  },
+  "options_page": "options.html"
+}
+

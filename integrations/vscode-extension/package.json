@@ -1,0 +1,23 @@
+{
+  "name": "myai-quick-command",
+  "displayName": "MyAI Quick Command",
+  "description": "Trigger MyAI commands from VS Code.",
+  "version": "0.0.1",
+  "publisher": "myai",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "activationEvents": [
+    "onCommand:myai.runQuickCommand"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "myai.runQuickCommand",
+        "title": "MyAI: Run Quick Command"
+      }
+    ]
+  }
+}
+
