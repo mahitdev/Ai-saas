@@ -1113,19 +1113,56 @@ export function AiChatDashboard({ user }: { user: User }) {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <a href="/dashboard/comparison" className="rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-indigo-400/50">
-                <p className="text-sm font-semibold uppercase tracking-wide text-indigo-300">Model Comparison</p>
-                <p className="mt-2 text-sm text-slate-400">Use side-by-side model output on a dedicated page.</p>
-              </a>
-              <a href="/dashboard/mind-map" className="rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-fuchsia-400/50">
-                <p className="text-sm font-semibold uppercase tracking-wide text-fuchsia-300">Knowledge Mind Map</p>
-                <p className="mt-2 text-sm text-slate-400">Explore topic graph and source snippets in one place.</p>
-              </a>
-              <a href="/dashboard/logic-builder" className="rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-cyan-400/50">
-                <p className="text-sm font-semibold uppercase tracking-wide text-cyan-300">Logic Builder</p>
-                <p className="mt-2 text-sm text-slate-400">Design and run chained AI workflow blocks separately.</p>
-              </a>
+            <div className="space-y-3 rounded-lg border border-slate-700 bg-slate-950/50 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-200">Workspace Hub</p>
+                <p className="text-xs text-slate-500">Use the full space for faster actions</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <a href="/dashboard/comparison" className="min-h-44 rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-indigo-400/50">
+                  <div className="flex items-center gap-2">
+                    <Brain className="size-4 text-indigo-300" />
+                    <p className="text-sm font-semibold uppercase tracking-wide text-indigo-300">Model Comparison</p>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-400">Run side-by-side prompts and lock in the best output instantly.</p>
+                  <div className="mt-4 grid grid-cols-3 gap-1">
+                    {[42, 66, 58].map((value, index) => (
+                      <div key={index} className="rounded bg-indigo-500/25" style={{ height: `${value}px` }} />
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-indigo-200">Open dedicated comparison lab</p>
+                </a>
+
+                <a href="/dashboard/mind-map" className="min-h-44 rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-fuchsia-400/50">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="size-4 text-fuchsia-300" />
+                    <p className="text-sm font-semibold uppercase tracking-wide text-fuchsia-300">Knowledge Mind Map</p>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-400">Visualize recurring topics and jump into connected message evidence.</p>
+                  <div className="mt-4 flex flex-wrap gap-1">
+                    {["memory", "budget", "api", "workflow", "security"].map((chip) => (
+                      <span key={chip} className="rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] text-fuchsia-200">
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-fuchsia-200">Explore topic graph view</p>
+                </a>
+
+                <a href="/dashboard/logic-builder" className="min-h-44 rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-cyan-400/50">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="size-4 text-cyan-300" />
+                    <p className="text-sm font-semibold uppercase tracking-wide text-cyan-300">Logic Builder</p>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-400">Chain search, summarize, and draft blocks into reusable workflows.</p>
+                  <div className="mt-4 space-y-1 text-xs text-cyan-100">
+                    <p>1. Web Search</p>
+                    <p>2. Summarize</p>
+                    <p>3. Draft Output</p>
+                  </div>
+                  <p className="mt-2 text-xs text-cyan-200">Open drag-and-drop builder</p>
+                </a>
+              </div>
             </div>
           </CardContent>
         </Card>

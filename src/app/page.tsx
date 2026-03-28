@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -13,6 +13,7 @@ import {
   Cpu,
   Mail,
   History,
+  Command,
   Lock,
   MessagesSquare,
   Mic,
@@ -30,12 +31,56 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function Home() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const [agentStep, setAgentStep] = useState(0);
+  const [teamSize, setTeamSize] = useState(8);
+  const [manualHours, setManualHours] = useState(120);
+  const [displayHoursSaved, setDisplayHoursSaved] = useState(0);
+  const [displayDollarsSaved, setDisplayDollarsSaved] = useState(0);
+  const [selectedIntegration, setSelectedIntegration] = useState("Slack");
+
+  const integrationRecipes: Record<string, string> = {
+    Slack: "When a task completes, MyAI posts summary + next steps into #ops in under 15 seconds.",
+    GitHub: "MyAI reads PR context, drafts review notes, and pushes issue-ready action lists.",
+    Notion: "MyAI converts chat outputs into structured docs and updates team playbooks automatically.",
+    Gmail: "MyAI drafts follow-up emails from meeting context with editable tone presets.",
+    Linear: "MyAI creates tickets from conversations and assigns owners by workload hints.",
+    HubSpot: "MyAI summarizes account threads and drafts personalized outreach sequences.",
+  };
+
+  const targetHoursSaved = useMemo(() => Math.round(teamSize * manualHours * 0.38), [teamSize, manualHours]);
+  const targetDollarsSaved = useMemo(() => Math.round(targetHoursSaved * 42), [targetHoursSaved]);
 
   useEffect(() => {
     if (session?.user) {
       router.replace("/dashboard");
     }
   }, [router, session]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setAgentStep((current) => (current + 1) % 4);
+    }, 1400);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const durationMs = 700;
+    const tickMs = 20;
+    const totalTicks = Math.max(1, Math.floor(durationMs / tickMs));
+    const startHours = 0;
+    const startDollars = 0;
+    let tick = 0;
+
+    const timer = setInterval(() => {
+      tick += 1;
+      const progress = Math.min(1, tick / totalTicks);
+      setDisplayHoursSaved(Math.round(startHours + (targetHoursSaved - startHours) * progress));
+      setDisplayDollarsSaved(Math.round(startDollars + (targetDollarsSaved - startDollars) * progress));
+      if (progress >= 1) clearInterval(timer);
+    }, tickMs);
+
+    return () => clearInterval(timer);
+  }, [targetHoursSaved, targetDollarsSaved]);
 
   if (isPending) {
     return (
@@ -365,6 +410,126 @@ export default function Home() {
               <Palette className="size-5 text-amber-300" />
               <p className="font-medium text-amber-100">Theme Controls</p>
               <p className="text-xs text-slate-400">Light, dark, and system theme options in dashboard sidebar.</p>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-2">
+          <Card className="border-cyan-500/25 bg-slate-900/60">
+            <CardContent className="space-y-4 p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">Real-Time Agent Showcase</p>
+              <h3 className="text-2xl font-semibold text-slate-100">Our AI doesn&apos;t just chat; it executes.</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-md border border-slate-700 bg-slate-950/70 p-3 text-xs text-slate-300">
+                  <p className="text-cyan-200">Task</p>
+                  <p className="mt-1">&quot;Analyze Q2 budget, summarize risks, draft stakeholder update.&quot;</p>
+                </div>
+                <div className="rounded-md border border-slate-700 bg-slate-950/70 p-3 text-xs">
+                  <p className={`${agentStep >= 1 ? "text-emerald-300" : "text-slate-500"}`}>Thinking</p>
+                  <p className={`${agentStep >= 2 ? "text-emerald-300" : "text-slate-500"}`}>Searching</p>
+                  <p className={`${agentStep >= 3 ? "text-emerald-300" : "text-slate-500"}`}>Executing</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-indigo-500/25 bg-slate-900/60">
+            <CardContent className="space-y-4 p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-300">Cost vs Savings Calculator</p>
+              <div className="space-y-3 text-sm text-slate-300">
+                <label className="block">
+                  Team size: <span className="text-indigo-200">{teamSize}</span>
+                  <input type="range" min={1} max={120} value={teamSize} onChange={(event) => setTeamSize(Number(event.target.value))} className="mt-1 w-full" />
+                </label>
+                <label className="block">
+                  Manual task hours/month: <span className="text-indigo-200">{manualHours}</span>
+                  <input type="range" min={10} max={600} value={manualHours} onChange={(event) => setManualHours(Number(event.target.value))} className="mt-1 w-full" />
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-md border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="text-xs text-slate-400">Hours saved / month</p>
+                  <p className="text-2xl font-semibold text-cyan-200">{displayHoursSaved}</p>
+                </div>
+                <div className="rounded-md border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="text-xs text-slate-400">Dollars saved / month</p>
+                  <p className="text-2xl font-semibold text-emerald-200">${displayDollarsSaved.toLocaleString()}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+          <Card className="border-emerald-500/25 bg-slate-900/60">
+            <CardContent className="space-y-4 p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">Privacy Shield</p>
+              <h3 className="text-2xl font-semibold text-slate-100">Built with trust from the ground up.</h3>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="rounded-md border border-slate-700 bg-slate-950/70 p-2 text-emerald-200">SOC2 Ready</div>
+                <div className="rounded-md border border-slate-700 bg-slate-950/70 p-2 text-cyan-200">GDPR Aligned</div>
+                <div className="rounded-md border border-slate-700 bg-slate-950/70 p-2 text-indigo-200">Zero-Trust</div>
+              </div>
+              <p className="text-sm text-slate-300">
+                Zero-Trust Data Scrubbing masks sensitive data before model calls, and your data is never used for model training.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-fuchsia-500/25 bg-slate-900/60">
+            <CardContent className="space-y-4 p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-fuchsia-300">Power Users</p>
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="rounded-md border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="text-xs text-slate-400">Last week impact</p>
+                  <p className="text-xl font-semibold text-fuchsia-200">4.5M lines generated</p>
+                </div>
+                <div className="rounded-md border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="text-xs text-slate-400">Ops savings</p>
+                  <p className="text-xl font-semibold text-fuchsia-200">$200k saved</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-300">Used by startup CTOs, RevOps teams, legal ops leads, and product managers shipping daily.</p>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="space-y-4">
+          <Card className="border-slate-800 bg-slate-900/60">
+            <CardContent className="space-y-4 p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">Integrations Wall</p>
+              <div className="overflow-hidden rounded-md border border-slate-700 bg-slate-950/60 py-2">
+                <div className="flex min-w-max gap-8 px-4 text-sm text-slate-300 animate-marquee">
+                  {Object.keys(integrationRecipes).map((name) => (
+                    <button key={`m1-${name}`} type="button" onClick={() => setSelectedIntegration(name)} className="hover:text-cyan-200">
+                      {name}
+                    </button>
+                  ))}
+                  {Object.keys(integrationRecipes).map((name) => (
+                    <button key={`m2-${name}`} type="button" onClick={() => setSelectedIntegration(name)} className="hover:text-cyan-200">
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-md border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-300">
+                <p className="text-cyan-200">{selectedIntegration} recipe (15s):</p>
+                <p className="mt-1">{integrationRecipes[selectedIntegration]}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-indigo-500/25 bg-slate-900/60">
+            <CardContent className="space-y-3 p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-300">Global Cmd+K Preview</p>
+              <div className="rounded-md border border-slate-700 bg-slate-950/70 p-3 font-mono text-xs text-slate-200">
+                <p className="text-indigo-200">
+                  <Command className="mr-1 inline size-3" />
+                  K {"->"} /summarize-last-week-tickets --team=eng --priority=high
+                </p>
+                <p className="mt-1 text-slate-400">Navigating your business at the speed of thought...</p>
+              </div>
+              <p className="text-sm text-slate-300">Navigate your entire business at the speed of thought.</p>
             </CardContent>
           </Card>
         </section>

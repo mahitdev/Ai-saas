@@ -156,6 +156,15 @@
   }
 }
 
+@keyframes marqueeX {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 @layer utilities {
   .animate-float-slow {
     animation: floatY 7.2s ease-in-out infinite;
@@ -171,5 +180,9 @@
 
   .animate-glow-pulse {
     animation: glowPulse 6s ease-in-out infinite;
+  }
+
+  .animate-marquee {
+    animation: marqueeX 18s linear infinite;
   }
 }
