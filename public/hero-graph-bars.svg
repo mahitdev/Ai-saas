@@ -1,0 +1,42 @@
+<svg width="1200" height="600" viewBox="0 0 1200 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgb" x1="0" y1="0" x2="1200" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="bar1" x1="208" y1="465" x2="208" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#67E8F9"/>
+    </linearGradient>
+    <linearGradient id="bar2" x1="390" y1="465" x2="390" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#93C5FD"/>
+    </linearGradient>
+    <linearGradient id="bar3" x1="572" y1="465" x2="572" y2="260" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#818CF8"/>
+      <stop offset="1" stop-color="#A5B4FC"/>
+    </linearGradient>
+    <linearGradient id="bar4" x1="754" y1="465" x2="754" y2="145" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D946EF"/>
+      <stop offset="1" stop-color="#F0ABFC"/>
+    </linearGradient>
+    <linearGradient id="bar5" x1="936" y1="465" x2="936" y2="198" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399"/>
+      <stop offset="1" stop-color="#A7F3D0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="600" fill="url(#bgb)"/>
+  <g stroke="#334155" stroke-opacity="0.75">
+    <path d="M110 100H1090"/>
+    <path d="M110 190H1090"/>
+    <path d="M110 280H1090"/>
+    <path d="M110 370H1090"/>
+    <path d="M110 460H1090"/>
+  </g>
+  <rect x="150" y="220" width="116" height="245" rx="18" fill="url(#bar1)"/>
+  <rect x="332" y="180" width="116" height="285" rx="18" fill="url(#bar2)"/>
+  <rect x="514" y="260" width="116" height="205" rx="18" fill="url(#bar3)"/>
+  <rect x="696" y="145" width="116" height="320" rx="18" fill="url(#bar4)"/>
+  <rect x="878" y="198" width="116" height="267" rx="18" fill="url(#bar5)"/>
+  <text x="110" y="62" fill="#C4B5FD" font-size="26" font-family="Arial, sans-serif">Feature Usage Snapshot</text>
+</svg>

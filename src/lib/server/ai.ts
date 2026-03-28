@@ -121,12 +121,29 @@ async function listGeminiGenerateModels(apiKey: string) {
   }
 }
 
+function parseImageDataUrl(imageDataUrl?: string) {
+  if (!imageDataUrl || !imageDataUrl.startsWith("data:image/")) {
+    return null;
+  }
+  const [meta, data] = imageDataUrl.split(",", 2);
+  if (!meta || !data) {
+    return null;
+  }
+  const mimeType = meta.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64$/)?.[1];
+  if (!mimeType) {
+    return null;
+  }
+  return { mimeType, base64Data: data };
+}
+
 export async function generateAssistantReply(params: {
   userId: string;
   userMessage: string;
   conversationId: string;
+  assistant: "auto" | "chatgpt" | "gemini";
+  imageDataUrl?: string;
 }) {
-  const { userId, userMessage, conversationId } = params;
+  const { userId, userMessage, conversationId, assistant, imageDataUrl } = params;
 
   const memorySummary = await updateUserMemory(userId, userMessage);
 
@@ -144,85 +161,212 @@ export async function generateAssistantReply(params: {
     .reverse()
     .map((row) => ({ role: row.role as "user" | "assistant", content: row.content }));
 
-  const apiKey = env.GEMINI_API_KEY?.trim();
+  const systemInstruction =
+    "You are a warm AI assistant in a personal chat app. Be concise, helpful, and remember user context.";
+  const parsedImage = parseImageDataUrl(imageDataUrl);
 
-  if (!apiKey) {
+  async function tryGeminiReply() {
+    const apiKey = env.GEMINI_API_KEY?.trim();
+    if (!apiKey) {
+      return {
+        ok: false as const,
+        error:
+          "GEMINI_API_KEY is not configured for this deployment yet. Add it in Vercel Environment Variables and redeploy.",
+      };
+    }
+
+    const availableModels = await listGeminiGenerateModels(apiKey);
+    const preferred = [
+      "models/gemini-2.5-flash",
+      "models/gemini-2.0-flash",
+      "models/gemini-1.5-flash-latest",
+      "models/gemini-1.5-flash",
+    ];
+    const fallback = ["models/gemini-2.0-flash", "models/gemini-1.5-flash-latest"];
+    const models = (availableModels.length > 0
+      ? [...preferred.filter((name) => availableModels.includes(name)), ...availableModels]
+      : fallback
+    ).filter((value, index, array) => array.indexOf(value) === index);
+    let lastError = "Unknown provider error";
+
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: "user",
+                  parts: [{ text: systemInstruction }],
+                },
+                ...(memorySummary
+                  ? [{ role: "user", parts: [{ text: `User memory:\n${memorySummary}` }] }]
+                  : []),
+                ...history.map((item) => ({
+                  role: item.role === "assistant" ? "model" : "user",
+                  parts: [{ text: item.content }],
+                })),
+                {
+                  role: "user",
+                  parts: [
+                    { text: userMessage },
+                    ...(parsedImage
+                      ? [
+                          {
+                            inline_data: {
+                              mime_type: parsedImage.mimeType,
+                              data: parsedImage.base64Data,
+                            },
+                          },
+                        ]
+                      : []),
+                  ],
+                },
+              ],
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "");
+          lastError = `Model ${model} failed (${response.status}). ${errorText}`.slice(0, 240);
+          continue;
+        }
+
+        const payload = await response.json();
+        const reply = extractGeminiText(payload);
+
+        if (!reply) {
+          lastError = `Model ${model} returned empty output`;
+          continue;
+        }
+
+        return { ok: true as const, reply };
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : "Request exception";
+      }
+    }
+
     return {
-      reply:
-        "GEMINI_API_KEY is not configured for this deployment yet. Add it in Vercel Environment Variables and redeploy.",
-      memorySummary,
+      ok: false as const,
+      error: `I couldn't reach the AI provider right now. ${lastError}`,
     };
   }
 
-  const availableModels = await listGeminiGenerateModels(apiKey);
-  const preferred = [
-    "models/gemini-2.5-flash",
-    "models/gemini-2.0-flash",
-    "models/gemini-1.5-flash-latest",
-    "models/gemini-1.5-flash",
-  ];
-  const fallback = ["models/gemini-2.0-flash", "models/gemini-1.5-flash-latest"];
-  const models = (availableModels.length > 0
-    ? [...preferred.filter((name) => availableModels.includes(name)), ...availableModels]
-    : fallback
-  ).filter((value, index, array) => array.indexOf(value) === index);
-  let lastError = "Unknown provider error";
-
-  for (const model of models) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
-        {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text:
-                    "You are a warm AI assistant in a personal chat app. Be concise, helpful, and remember user context.",
-                },
-              ],
-            },
-            ...(memorySummary
-              ? [{ role: "user", parts: [{ text: `User memory:\n${memorySummary}` }] }]
-              : []),
-            ...history.map((item) => ({
-              role: item.role === "assistant" ? "model" : "user",
-              parts: [{ text: item.content }],
-            })),
-            { role: "user", parts: [{ text: userMessage }] },
-          ],
-        }),
-      },
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "");
-        lastError = `Model ${model} failed (${response.status}). ${errorText}`.slice(0, 240);
-        continue;
-      }
-
-      const payload = await response.json();
-      const reply = extractGeminiText(payload);
-
-      if (!reply) {
-        lastError = `Model ${model} returned empty output`;
-        continue;
-      }
-
-      return { reply, memorySummary };
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : "Request exception";
+  async function tryOpenAiReply() {
+    const apiKey = env.OPENAI_API_KEY?.trim();
+    if (!apiKey) {
+      return {
+        ok: false as const,
+        error:
+          "OPENAI_API_KEY is not configured for this deployment yet. Add it in Vercel Environment Variables and redeploy.",
+      };
     }
+
+    const models = ["gpt-4.1-mini", "gpt-4o-mini"];
+    let lastError = "Unknown provider error";
+
+    const input = [
+      { role: "system", content: systemInstruction },
+      ...(memorySummary ? [{ role: "system", content: `User memory:\n${memorySummary}` }] : []),
+      ...history.map((item) => ({
+        role: item.role,
+        content: item.content,
+      })),
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: userMessage },
+          ...(parsedImage ? [{ type: "input_image", image_url: imageDataUrl }] : []),
+        ],
+      },
+    ];
+
+    for (const model of models) {
+      try {
+        const response = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            input,
+            temperature: 0.7,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "");
+          lastError = `Model ${model} failed (${response.status}). ${errorText}`.slice(0, 240);
+          continue;
+        }
+
+        const payload = (await response.json()) as {
+          output_text?: string;
+          output?: Array<{
+            content?: Array<{ type?: string; text?: string }>;
+          }>;
+        };
+
+        const textFromOutput = payload.output_text?.trim();
+        if (textFromOutput) {
+          return { ok: true as const, reply: textFromOutput };
+        }
+
+        const nestedText =
+          payload.output
+            ?.flatMap((item) => item.content ?? [])
+            .find((item) => item.type === "output_text" && item.text?.trim())?.text
+            ?.trim() ?? "";
+
+        if (nestedText) {
+          return { ok: true as const, reply: nestedText };
+        }
+
+        lastError = `Model ${model} returned empty output`;
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : "Request exception";
+      }
+    }
+
+    return {
+      ok: false as const,
+      error: `I couldn't reach the AI provider right now. ${lastError}`,
+    };
+  }
+
+  if (assistant === "gemini") {
+    const result = await tryGeminiReply();
+    return { reply: result.ok ? result.reply : result.error, memorySummary };
+  }
+
+  if (assistant === "chatgpt") {
+    const result = await tryOpenAiReply();
+    return { reply: result.ok ? result.reply : result.error, memorySummary };
+  }
+
+  const openAiResult = await tryOpenAiReply();
+  if (openAiResult.ok) {
+    return { reply: openAiResult.reply, memorySummary };
+  }
+
+  const geminiResult = await tryGeminiReply();
+  if (geminiResult.ok) {
+    return { reply: geminiResult.reply, memorySummary };
   }
 
   return {
-    reply: `I couldn't reach the AI provider right now. ${lastError}`,
+    reply: `I couldn't reach the AI provider right now. OpenAI: ${openAiResult.error} | Gemini: ${geminiResult.error}`.slice(
+      0,
+      500,
+    ),
     memorySummary,
   };
 }

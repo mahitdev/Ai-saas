@@ -4,7 +4,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Bot, Brain, Lock, Mic, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Bot,
+  Brain,
+  Camera,
+  Cpu,
+  Mail,
+  History,
+  Lock,
+  MessagesSquare,
+  Mic,
+  ShieldCheck,
+  Sparkles,
+  Palette,
+  Zap,
+} from "lucide-react";
 
 import { authClient } from "@/lib/auth.client";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +80,12 @@ export default function Home() {
               </Button>
               <Button asChild size="lg" variant="outline" className="border-slate-700 bg-slate-900/60 text-slate-100 hover:bg-slate-800">
                 <Link href="/auth/sign-in">Sign in</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-100 hover:bg-fuchsia-500/20">
+                <Link href="/contact">
+                  Contact
+                  <Mail className="ml-2 size-4" />
+                </Link>
               </Button>
             </div>
           </div>
@@ -205,6 +227,144 @@ export default function Home() {
                 height={600}
                 className="h-auto w-full animate-float-mid [animation-delay:0.8s]"
               />
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+          <Card className="border-slate-800 bg-slate-900/60">
+            <CardContent className="space-y-5 p-6 md:p-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">What this app does</p>
+              <h3 className="text-2xl font-semibold text-slate-100 md:text-3xl">An AI assistant with memory, voice, and secure accounts.</h3>
+              <p className="text-slate-300">
+                Users can create multiple chats, talk with voice input, get spoken responses, and continue conversations with saved memory context.
+                Every account has its own protected workspace, conversation history, and API-based chat backend.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+                  <div className="mb-2 flex items-center gap-2 text-cyan-200">
+                    <MessagesSquare className="size-4" />
+                    <p className="text-sm font-medium">Multi-Chat Workspace</p>
+                  </div>
+                  <p className="text-xs text-slate-400">Create, switch, and manage separate conversation threads instantly.</p>
+                </div>
+                <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+                  <div className="mb-2 flex items-center gap-2 text-indigo-200">
+                    <History className="size-4" />
+                    <p className="text-sm font-medium">Context Memory</p>
+                  </div>
+                  <p className="text-xs text-slate-400">The assistant remembers important details to reduce repeated prompts.</p>
+                </div>
+                <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+                  <div className="mb-2 flex items-center gap-2 text-fuchsia-200">
+                    <Mic className="size-4" />
+                    <p className="text-sm font-medium">Voice Interaction</p>
+                  </div>
+                  <p className="text-xs text-slate-400">Speak naturally with mic input and hear AI output via text-to-speech.</p>
+                </div>
+                <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+                  <div className="mb-2 flex items-center gap-2 text-emerald-200">
+                    <Lock className="size-4" />
+                    <p className="text-sm font-medium">Secure Access</p>
+                  </div>
+                  <p className="text-xs text-slate-400">Auth-protected dashboard and user-scoped conversation data.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-5">
+            <Card className="overflow-hidden border-cyan-500/25 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-center gap-2 text-cyan-200">
+                  <BarChart3 className="size-4" />
+                  <p className="text-sm font-medium">Engagement Graph</p>
+                </div>
+                <Image src="/hero-graph-line.svg" alt="Line graph showing rising engagement" width={1200} height={600} className="h-auto w-full rounded-md" />
+              </CardContent>
+            </Card>
+            <Card className="overflow-hidden border-indigo-500/25 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-center gap-2 text-indigo-200">
+                  <Zap className="size-4" />
+                  <p className="text-sm font-medium">Feature Usage Graph</p>
+                </div>
+                <Image src="/hero-graph-bars.svg" alt="Bar graph for feature usage metrics" width={1200} height={600} className="h-auto w-full rounded-md" />
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+          <Card className="overflow-hidden border-fuchsia-500/25 bg-slate-950/70 transition-transform duration-500 hover:-translate-y-1 hover:scale-[1.01]">
+            <CardContent className="p-0">
+              <Image
+                src="/hero-hologram-network.svg"
+                alt="Animated style AI hologram network visual"
+                width={1200}
+                height={700}
+                className="h-auto w-full animate-float-slow"
+              />
+            </CardContent>
+          </Card>
+          <Card className="border-slate-800 bg-slate-900/60">
+            <CardContent className="space-y-4 p-6 md:p-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-fuchsia-300">Brilliant Experience</p>
+              <h3 className="text-2xl font-semibold text-slate-100 md:text-3xl">
+                Visual, intelligent, and designed to keep users engaged.
+              </h3>
+              <p className="text-slate-300">
+                The front page now blends motion, neon gradients, and rich storytelling blocks to explain exactly what your AI platform offers: memory chat, voice conversation, secure sessions, and productivity-focused assistance.
+              </p>
+              <div className="grid grid-cols-2 gap-3 text-xs text-slate-300 sm:text-sm">
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="font-semibold text-cyan-300">Interactive visuals</p>
+                  Floating art cards + dynamic glow layers.
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="font-semibold text-indigo-300">Guided flow</p>
+                  Clear path from landing to sign-up and dashboard.
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="font-semibold text-fuchsia-300">Feature explainers</p>
+                  Multi-chat, memory, voice, and security sections.
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                  <p className="font-semibold text-emerald-300">User trust</p>
+                  Auth-protected accounts with scoped conversation history.
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-4">
+          <Card className="border-slate-800 bg-slate-900/60 transition-transform duration-500 hover:-translate-y-1">
+            <CardContent className="space-y-2 p-5">
+              <Mic className="size-5 text-cyan-300" />
+              <p className="font-medium text-cyan-100">One-to-One Live Talk</p>
+              <p className="text-xs text-slate-400">Hands-free mode keeps listening after each AI reply.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-800 bg-slate-900/60 transition-transform duration-500 hover:-translate-y-1">
+            <CardContent className="space-y-2 p-5">
+              <Camera className="size-5 text-emerald-300" />
+              <p className="font-medium text-emerald-100">Face-to-Face Camera</p>
+              <p className="text-xs text-slate-400">Send live or captured frames with your prompts to AI.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-800 bg-slate-900/60 transition-transform duration-500 hover:-translate-y-1">
+            <CardContent className="space-y-2 p-5">
+              <Cpu className="size-5 text-fuchsia-300" />
+              <p className="font-medium text-fuchsia-100">Model Switcher</p>
+              <p className="text-xs text-slate-400">Pick ChatGPT, Gemini, or Auto fallback mode anytime.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-800 bg-slate-900/60 transition-transform duration-500 hover:-translate-y-1">
+            <CardContent className="space-y-2 p-5">
+              <Palette className="size-5 text-amber-300" />
+              <p className="font-medium text-amber-100">Theme Controls</p>
+              <p className="text-xs text-slate-400">Light, dark, and system theme options in dashboard sidebar.</p>
             </CardContent>
           </Card>
         </section>

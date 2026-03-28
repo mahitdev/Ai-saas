@@ -1,7 +1,32 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bot, Loader2, Mic, MicOff, Plus, Send, Trash2, Volume2, VolumeX } from "lucide-react";
+import {
+  Bot,
+  Brain,
+  Camera,
+  CameraOff,
+  Contact,
+  Cpu,
+  ImagePlus,
+  Loader2,
+  Monitor,
+  Mic,
+  MicOff,
+  Moon,
+  Plus,
+  Send,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  Trash2,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
+import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth.client";
@@ -33,6 +58,8 @@ type Message = {
   createdAt: string;
 };
 
+type LogicBlockType = "web_search" | "summarize" | "draft_email";
+
 type ConversationPayload = {
   conversations: Conversation[];
   memory: string;
@@ -56,6 +83,7 @@ declare global {
 }
 
 export function AiChatDashboard({ user }: { user: User }) {
+  const { theme, setTheme } = useTheme();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -66,9 +94,33 @@ export function AiChatDashboard({ user }: { user: User }) {
   const [sending, setSending] = useState(false);
   const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(true);
   const [listening, setListening] = useState(false);
+  const [directVoiceMode, setDirectVoiceMode] = useState(false);
+  const [conversationMode, setConversationMode] = useState(false);
+  const [selectedAssistant, setSelectedAssistant] = useState<"chatgpt" | "gemini" | "auto">("auto");
+  const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [sendLiveFrame, setSendLiveFrame] = useState(true);
+  const [logicBlocks, setLogicBlocks] = useState<Array<{ id: string; type: LogicBlockType }>>([
+    { id: "b1", type: "web_search" },
+    { id: "b2", type: "summarize" },
+  ]);
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const [workflowPrompt, setWorkflowPrompt] = useState("");
+  const [workflowOutput, setWorkflowOutput] = useState("");
+  const [comparePrompt, setComparePrompt] = useState("");
+  const [compareLeftModel, setCompareLeftModel] = useState<"auto" | "chatgpt" | "gemini">("chatgpt");
+  const [compareRightModel, setCompareRightModel] = useState<"auto" | "chatgpt" | "gemini">("gemini");
+  const [compareLeftResult, setCompareLeftResult] = useState("");
+  const [compareRightResult, setCompareRightResult] = useState("");
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [mindMapTopic, setMindMapTopic] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const initials = useMemo(
     () =>
@@ -84,6 +136,33 @@ export function AiChatDashboard({ user }: { user: User }) {
     () => conversations.find((conversation) => conversation.id === activeConversationId) ?? null,
     [conversations, activeConversationId],
   );
+  const mindMapKeywords = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const message of messages) {
+      const words = message.content
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter((word) => word.length > 4 && !["about", "there", "which", "would", "could", "their", "while", "where"].includes(word));
+      for (const word of words) {
+        counts.set(word, (counts.get(word) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([word, count]) => ({ word, count }));
+  }, [messages]);
+  const workspacePages = [
+    { href: "/dashboard/library", title: "Library", description: "Assets, versions, tagging" },
+    { href: "/dashboard/analytics", title: "Analytics", description: "Efficiency and trends" },
+    { href: "/dashboard/developer", title: "API & Developer", description: "Keys and sandbox" },
+    { href: "/dashboard/model-lab", title: "Model Lab", description: "Prompt and RAG tuning" },
+    { href: "/dashboard/orchestrator", title: "Orchestrator", description: "Agent squad workflows" },
+    { href: "/dashboard/security", title: "Security", description: "PII and injection alerts" },
+    { href: "/dashboard/style", title: "Style Tuner", description: "Brand voice scoring" },
+    { href: "/dashboard/compliance", title: "Compliance", description: "Audit and ESG report" },
+  ];
 
   function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -136,20 +215,83 @@ export function AiChatDashboard({ user }: { user: User }) {
     scrollToBottom();
   }, [messages]);
 
-  function speak(text: string) {
-    if (!voiceOutputEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) {
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  async function startCamera() {
+    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Camera is not supported in this browser.");
       return;
     }
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    try {
+      setCameraError(null);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: "user" },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => undefined);
+      }
+      setCameraEnabled(true);
+      setCameraReady(true);
+    } catch (error) {
+      setCameraEnabled(false);
+      setCameraReady(false);
+      setCameraError(error instanceof Error ? error.message : "Unable to access camera.");
+    }
   }
 
-  function toggleListening() {
-    if (typeof window === "undefined") return;
+  function stopCamera() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraEnabled(false);
+    setCameraReady(false);
+  }
 
+  function captureFrame() {
+    if (!videoRef.current || !cameraReady) return "";
+    const video = videoRef.current;
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 360;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return "";
+    context.drawImage(video, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.75);
+  }
+
+  function speak(text: string) {
+    return new Promise<void>((resolve) => {
+      if (!voiceOutputEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) {
+        resolve();
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    });
+  }
+
+  function startListening() {
+    if (typeof window === "undefined") return;
     const RecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!RecognitionCtor) {
       toast.error("Speech recognition is not supported in this browser.");
@@ -161,27 +303,80 @@ export function AiChatDashboard({ user }: { user: User }) {
       recognition.lang = "en-US";
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.onresult = (event) => {
-        const transcript = event.results[0]?.[0]?.transcript ?? "";
-        if (transcript) {
-          setInput((previous) => `${previous} ${transcript}`.trim());
-        }
-        setListening(false);
-      };
-      recognition.onerror = () => {
-        setListening(false);
-      };
       recognitionRef.current = recognition;
     }
 
-    if (listening) {
-      recognitionRef.current.stop();
+    recognitionRef.current.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      if (transcript) {
+        if (directVoiceMode) {
+          void sendMessageText(transcript.trim());
+        } else {
+          setInput((previous) => `${previous} ${transcript}`.trim());
+        }
+      }
       setListening(false);
-      return;
-    }
+    };
+    recognitionRef.current.onerror = () => {
+      setListening(false);
+    };
 
     recognitionRef.current.start();
     setListening(true);
+  }
+
+  function stopListening() {
+    recognitionRef.current?.stop();
+    setListening(false);
+  }
+
+  async function sendMessageText(messageText: string, explicitImageDataUrl?: string) {
+    if (!messageText.trim() || sending) return;
+    setSending(true);
+    const imageDataUrl = explicitImageDataUrl || (cameraEnabled && sendLiveFrame ? captureFrame() : "");
+
+    try {
+      const response = await fetch("/api/chat/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          conversationId: activeConversationId ?? undefined,
+          message: messageText,
+          assistant: selectedAssistant,
+          imageDataUrl: imageDataUrl || undefined,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to send message");
+      const payload = (await response.json()) as {
+        conversationId: string;
+        userMessage: Message;
+        assistantMessage: Message;
+        memorySummary: string;
+      };
+
+      if (!activeConversationId) {
+        await fetchConversations();
+      }
+      setActiveConversationId(payload.conversationId);
+      setMessages((previous) => [...previous, payload.userMessage, payload.assistantMessage]);
+      setMemory(payload.memorySummary);
+      await speak(payload.assistantMessage.content);
+      if (conversationMode && directVoiceMode && !listening) {
+        startListening();
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to send message");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function toggleListening() {
+    if (listening) {
+      stopListening();
+      return;
+    }
+    startListening();
   }
 
   async function createConversation() {
@@ -218,44 +413,79 @@ export function AiChatDashboard({ user }: { user: User }) {
 
   async function sendMessage() {
     if (!input.trim() || sending) return;
-    setSending(true);
     const messageText = input.trim();
+    const imageToSend = capturedImage ?? undefined;
     setInput("");
+    setCapturedImage(null);
+    await sendMessageText(messageText, imageToSend);
+  }
+
+  function addLogicBlock(type: LogicBlockType) {
+    setLogicBlocks((previous) => [...previous, { id: crypto.randomUUID(), type }]);
+  }
+
+  function moveLogicBlock(fromId: string, toId: string) {
+    setLogicBlocks((previous) => {
+      const fromIndex = previous.findIndex((block) => block.id === fromId);
+      const toIndex = previous.findIndex((block) => block.id === toId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return previous;
+      const next = [...previous];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
+
+  function runLogicWorkflow() {
+    if (!workflowPrompt.trim()) {
+      toast.error("Add a workflow prompt first.");
+      return;
+    }
+
+    let output = workflowPrompt.trim();
+    for (const block of logicBlocks) {
+      if (block.type === "web_search") {
+        output = `Search findings about "${output}":\n- Key trend\n- Supporting facts\n- Actionable insights`;
+      } else if (block.type === "summarize") {
+        output = `Summary:\n${output.slice(0, 240)}...`;
+      } else if (block.type === "draft_email") {
+        output = `Subject: Quick Update\n\nHi Team,\n\n${output}\n\nBest,\n${user.name}`;
+      }
+    }
+    setWorkflowOutput(output);
+  }
+
+  async function runModelComparison() {
+    if (!comparePrompt.trim() || compareLoading) return;
+    setCompareLoading(true);
+    setCompareLeftResult("");
+    setCompareRightResult("");
 
     try {
-      const response = await fetch("/api/chat/send", {
+      const response = await fetch("/api/chat/compare", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          conversationId: activeConversationId ?? undefined,
-          message: messageText,
+          prompt: comparePrompt.trim(),
+          leftModel: compareLeftModel,
+          rightModel: compareRightModel,
+          imageDataUrl: capturedImage ?? (cameraEnabled && sendLiveFrame ? captureFrame() : undefined),
         }),
       });
-      if (!response.ok) throw new Error("Failed to send message");
-      const payload = (await response.json()) as {
-        conversationId: string;
-        userMessage: Message;
-        assistantMessage: Message;
-        memorySummary: string;
-      };
-
-      if (!activeConversationId) {
-        await fetchConversations();
-      }
-      setActiveConversationId(payload.conversationId);
-      setMessages((previous) => [...previous, payload.userMessage, payload.assistantMessage]);
-      setMemory(payload.memorySummary);
-      speak(payload.assistantMessage.content);
+      if (!response.ok) throw new Error("Failed to compare models");
+      const payload = (await response.json()) as { leftResult: string; rightResult: string };
+      setCompareLeftResult(payload.leftResult);
+      setCompareRightResult(payload.rightResult);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to send message");
+      toast.error(error instanceof Error ? error.message : "Unable to compare models");
     } finally {
-      setSending(false);
+      setCompareLoading(false);
     }
   }
 
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.2),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#111827_100%)] p-4 text-slate-100 md:p-8">
-      <div className="mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-[290px_1fr]">
+      <div className="mx-auto grid w-full max-w-[1500px] gap-6 lg:grid-cols-[320px_1fr] xl:gap-8">
         <Card className="h-fit border-slate-700/70 bg-slate-950/80 text-slate-100 backdrop-blur">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -270,7 +500,7 @@ export function AiChatDashboard({ user }: { user: User }) {
             </div>
             <CardDescription className="text-slate-400">Your AI memory chat space.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <Button className="w-full bg-cyan-500/15 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.28)] hover:bg-cyan-500/25" onClick={() => void createConversation()}>
               <Plus className="mr-2 size-4" />
               New Chat
@@ -316,6 +546,249 @@ export function AiChatDashboard({ user }: { user: User }) {
               </div>
             </ScrollArea>
 
+            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Sidebar Menu</p>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard">
+                  <Bot className="mr-2 size-4" />
+                  Dashboard
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/library">
+                  <Sparkles className="mr-2 size-4" />
+                  Library
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/analytics">
+                  <Brain className="mr-2 size-4" />
+                  Analytics
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/developer">
+                  <Cpu className="mr-2 size-4" />
+                  API & Developer
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/model-lab">
+                  <Settings className="mr-2 size-4" />
+                  Model Lab
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/orchestrator">
+                  <Sparkles className="mr-2 size-4" />
+                  Agent Orchestrator
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/security">
+                  <ShieldCheck className="mr-2 size-4" />
+                  Security Audit
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/style">
+                  <Brain className="mr-2 size-4" />
+                  Style Tuner
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/compliance">
+                  <Cpu className="mr-2 size-4" />
+                  Compliance & ESG
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/contact">
+                  <Contact className="mr-2 size-4" />
+                  Contact
+                </a>
+              </Button>
+            </div>
+
+            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">What AI Has</p>
+              <p className="flex items-center gap-2 text-xs text-slate-300">
+                <Brain className="size-3.5 text-indigo-300" />
+                Long-term memory by conversation
+              </p>
+              <p className="flex items-center gap-2 text-xs text-slate-300">
+                <Mic className="size-3.5 text-cyan-300" />
+                Voice input and spoken replies
+              </p>
+              <p className="flex items-center gap-2 text-xs text-slate-300">
+                <Sparkles className="size-3.5 text-fuchsia-300" />
+                Quick starters and context recall
+              </p>
+            </div>
+
+            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-fuchsia-300">
+                <Cpu className="size-3.5" />
+                AI Models
+              </p>
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  className={`rounded-md border px-2 py-2 text-left text-xs transition ${
+                    selectedAssistant === "chatgpt"
+                      ? "border-cyan-400/70 bg-cyan-500/15 text-cyan-100"
+                      : "border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-400/40"
+                  }`}
+                  onClick={() => setSelectedAssistant("chatgpt")}
+                >
+                  ChatGPT
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-md border px-2 py-2 text-left text-xs transition ${
+                    selectedAssistant === "gemini"
+                      ? "border-indigo-400/70 bg-indigo-500/15 text-indigo-100"
+                      : "border-slate-700 bg-slate-900 text-slate-300 hover:border-indigo-400/40"
+                  }`}
+                  onClick={() => setSelectedAssistant("gemini")}
+                >
+                  Gemini
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-md border px-2 py-2 text-left text-xs transition ${
+                    selectedAssistant === "auto"
+                      ? "border-fuchsia-400/70 bg-fuchsia-500/15 text-fuchsia-100"
+                      : "border-slate-700 bg-slate-900 text-slate-300 hover:border-fuchsia-400/40"
+                  }`}
+                  onClick={() => setSelectedAssistant("auto")}
+                >
+                  Auto (Recommended)
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Selected model is now used for new AI responses.
+              </p>
+            </div>
+
+            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                <Settings className="size-3.5" />
+                Settings
+              </p>
+              <p className="text-[11px] text-slate-400">Theme: {theme ?? "system"}</p>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={theme === "light" ? "default" : "outline"}
+                  className={theme === "light" ? "bg-amber-500/20 text-amber-100" : "border-slate-700 bg-slate-900 text-slate-200"}
+                  onClick={() => setTheme("light")}
+                >
+                  <Sun className="mr-1 size-3.5" />
+                  Light
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={theme === "dark" ? "default" : "outline"}
+                  className={theme === "dark" ? "bg-slate-700 text-slate-100" : "border-slate-700 bg-slate-900 text-slate-200"}
+                  onClick={() => setTheme("dark")}
+                >
+                  <Moon className="mr-1 size-3.5" />
+                  Dark
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={theme === "system" ? "default" : "outline"}
+                  className={theme === "system" ? "bg-cyan-500/20 text-cyan-100" : "border-slate-700 bg-slate-900 text-slate-200"}
+                  onClick={() => setTheme("system")}
+                >
+                  <Monitor className="mr-1 size-3.5" />
+                  Auto
+                </Button>
+              </div>
+              <Button
+                type="button"
+                variant={voiceOutputEnabled ? "default" : "outline"}
+                size="sm"
+                className={voiceOutputEnabled ? "w-full bg-indigo-500/20 text-indigo-100 shadow-[0_0_14px_rgba(129,140,248,0.35)]" : "w-full border-slate-700 bg-slate-900 text-slate-200"}
+                onClick={() => setVoiceOutputEnabled((current) => !current)}
+              >
+                {voiceOutputEnabled ? <Volume2 className="mr-2 size-4" /> : <VolumeX className="mr-2 size-4" />}
+                Voice Output
+              </Button>
+              <Button
+                type="button"
+                variant={directVoiceMode ? "default" : "outline"}
+                size="sm"
+                className={directVoiceMode ? "w-full bg-fuchsia-500/20 text-fuchsia-100 shadow-[0_0_14px_rgba(217,70,239,0.35)]" : "w-full border-slate-700 bg-slate-900 text-slate-200"}
+                onClick={() => setDirectVoiceMode((current) => !current)}
+              >
+                {directVoiceMode ? <MicOff className="mr-2 size-4" /> : <Mic className="mr-2 size-4" />}
+                Direct Voice Chat
+              </Button>
+              <Button
+                type="button"
+                variant={conversationMode ? "default" : "outline"}
+                size="sm"
+                className={conversationMode ? "w-full bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.35)]" : "w-full border-slate-700 bg-slate-900 text-slate-200"}
+                onClick={() => {
+                  const next = !conversationMode;
+                  setConversationMode(next);
+                  if (!next) {
+                    stopListening();
+                  } else if (directVoiceMode && !listening) {
+                    startListening();
+                  }
+                }}
+              >
+                {conversationMode ? <MicOff className="mr-2 size-4" /> : <Mic className="mr-2 size-4" />}
+                One-to-One Mode
+              </Button>
+            </div>
+
             <Button
               variant="outline"
               className="w-full border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
@@ -353,7 +826,32 @@ export function AiChatDashboard({ user }: { user: User }) {
                   onClick={toggleListening}
                 >
                   {listening ? <MicOff className="mr-2 size-4" /> : <Mic className="mr-2 size-4" />}
-                  {listening ? "Stop" : "Talk"}
+                  {listening ? "Stop" : directVoiceMode ? "Talk & Send" : "Talk"}
+                </Button>
+                <Button
+                  type="button"
+                  variant={directVoiceMode ? "default" : "outline"}
+                  size="sm"
+                  className={directVoiceMode ? "bg-fuchsia-500/20 text-fuchsia-100 shadow-[0_0_14px_rgba(217,70,239,0.35)]" : "border-slate-700 bg-slate-900 text-slate-200"}
+                  onClick={() => setDirectVoiceMode((current) => !current)}
+                >
+                  Direct Voice
+                </Button>
+                <Button
+                  type="button"
+                  variant={cameraEnabled ? "default" : "outline"}
+                  size="sm"
+                  className={cameraEnabled ? "bg-emerald-500/20 text-emerald-100 shadow-[0_0_14px_rgba(16,185,129,0.35)]" : "border-slate-700 bg-slate-900 text-slate-200"}
+                  onClick={() => {
+                    if (cameraEnabled) {
+                      stopCamera();
+                      return;
+                    }
+                    void startCamera();
+                  }}
+                >
+                  {cameraEnabled ? <CameraOff className="mr-2 size-4" /> : <Camera className="mr-2 size-4" />}
+                  {cameraEnabled ? "Camera Off" : "Camera On"}
                 </Button>
                 <Button
                   type="button"
@@ -370,11 +868,37 @@ export function AiChatDashboard({ user }: { user: User }) {
             <Badge variant="outline" className="w-fit border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
               Memory: {memory ? `${memory.split("\n").length} notes` : "empty"}
             </Badge>
+            <p className="text-xs text-slate-400">
+              {directVoiceMode
+                ? "Direct voice is ON: speak and your message is sent automatically."
+                : "Direct voice is OFF: speech is inserted into the input box first."}
+            </p>
+            <p className="text-xs text-slate-400">
+              {conversationMode
+                ? "One-to-one mode is ON: AI listens again after each response for real-time conversation."
+                : "One-to-one mode is OFF: tap Talk each time you want to speak."}
+            </p>
+            {cameraError ? <p className="text-xs text-rose-300">Camera: {cameraError}</p> : null}
+            <div className="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Workspace Pages</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {workspacePages.map((page) => (
+                  <a
+                    key={page.href}
+                    href={page.href}
+                    className="rounded-md border border-slate-700 bg-slate-900/70 px-2 py-2 text-xs text-slate-200 transition hover:border-cyan-400/50 hover:text-cyan-100"
+                  >
+                    <p className="font-semibold">{page.title}</p>
+                    <p className="mt-1 text-slate-400">{page.description}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
           </CardHeader>
 
-          <CardContent className="space-y-3">
-            <div className="grid gap-3 lg:grid-cols-[1fr_260px]">
-              <div className="space-y-3">
+          <CardContent className="space-y-5">
+            <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
+              <div className="space-y-4">
                 <ScrollArea className="h-[420px] rounded-lg border border-slate-700 bg-[#050914] p-4">
                   {loadingMessages ? (
                     <div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -404,6 +928,74 @@ export function AiChatDashboard({ user }: { user: User }) {
                   )}
                 </ScrollArea>
 
+                {cameraEnabled ? (
+                  <div className="rounded-lg border border-emerald-500/35 bg-slate-950/60 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Face-to-Face Camera</p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={sendLiveFrame ? "default" : "outline"}
+                          className={sendLiveFrame ? "bg-emerald-500/20 text-emerald-100" : "border-slate-700 bg-slate-900 text-slate-200"}
+                          onClick={() => setSendLiveFrame((current) => !current)}
+                        >
+                          Live Frame
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="border-slate-700 bg-slate-900 text-slate-200"
+                          onClick={() => {
+                            const frame = captureFrame();
+                            if (frame) {
+                              setCapturedImage(frame);
+                              toast.success("Frame captured and attached.");
+                            }
+                          }}
+                        >
+                          <ImagePlus className="mr-1 size-4" />
+                          Capture
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="aspect-video w-full rounded-md border border-slate-700 bg-slate-900 object-cover"
+                      />
+                      {capturedImage ? (
+                        <div className="relative">
+                          <Image
+                            src={capturedImage}
+                            alt="Captured preview"
+                            width={640}
+                            height={360}
+                            unoptimized
+                            className="aspect-video w-full rounded-md border border-cyan-500/40 object-cover"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-2 top-2 rounded-full border border-slate-700 bg-slate-950/80 p-1 text-slate-200 hover:bg-slate-900"
+                            onClick={() => setCapturedImage(null)}
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex aspect-video items-center justify-center rounded-md border border-dashed border-slate-700 bg-slate-900/60 text-xs text-slate-400">
+                          No manual frame captured yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="flex gap-2">
                   <Input
                     value={input}
@@ -423,15 +1015,15 @@ export function AiChatDashboard({ user }: { user: User }) {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+              <div className="space-y-4">
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                   <p className="text-xs font-semibold tracking-wide text-cyan-300 uppercase">Section 1: Chat Info</p>
                   <p className="mt-2 text-sm text-slate-300">Active chat</p>
                   <p className="truncate text-sm font-medium text-cyan-100">{activeConversation?.title ?? "No chat selected"}</p>
                   <p className="mt-2 text-xs text-slate-400">Messages: {messages.length}</p>
                 </div>
 
-                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                   <p className="text-xs font-semibold tracking-wide text-indigo-300 uppercase">Section 2: Memory</p>
                   <div className="mt-2 space-y-1">
                     {memory ? memory.split("\n").slice(0, 5).map((line, idx) => (
@@ -440,7 +1032,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                   <p className="text-xs font-semibold tracking-wide text-fuchsia-300 uppercase">Section 3: Quick Starters</p>
                   <div className="mt-2 space-y-2">
                     {[
@@ -458,6 +1050,140 @@ export function AiChatDashboard({ user }: { user: User }) {
                       </button>
                     ))}
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-2">
+              <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-5">
+                <p className="text-sm font-semibold uppercase tracking-wide text-cyan-300">Logic Blocks Builder</p>
+                <p className="mt-1 text-sm text-slate-400">Drag blocks to reorder an AI workflow chain.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="outline" className="border-slate-700 bg-slate-900 text-slate-200" onClick={() => addLogicBlock("web_search")}>+ Web Search</Button>
+                  <Button type="button" size="sm" variant="outline" className="border-slate-700 bg-slate-900 text-slate-200" onClick={() => addLogicBlock("summarize")}>+ Summarize</Button>
+                  <Button type="button" size="sm" variant="outline" className="border-slate-700 bg-slate-900 text-slate-200" onClick={() => addLogicBlock("draft_email")}>+ Draft Email</Button>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {logicBlocks.map((block, index) => (
+                    <div
+                      key={block.id}
+                      draggable
+                      onDragStart={() => setDraggingBlockId(block.id)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={() => {
+                        if (draggingBlockId) moveLogicBlock(draggingBlockId, block.id);
+                        setDraggingBlockId(null);
+                      }}
+                      className="cursor-move rounded-md border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
+                    >
+                      {index + 1}. {block.type.replace("_", " ")}
+                    </div>
+                  ))}
+                </div>
+                <Input
+                  value={workflowPrompt}
+                  onChange={(event) => setWorkflowPrompt(event.target.value)}
+                  placeholder="Workflow input..."
+                  className="mt-4 h-11 border-slate-700 bg-slate-900 text-slate-100"
+                />
+                <Button type="button" className="mt-3 h-11 w-full bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={runLogicWorkflow}>
+                  Run Workflow
+                </Button>
+                {workflowOutput ? (
+                  <div className="mt-3 rounded-md border border-cyan-500/35 bg-slate-900/70 p-3 text-sm text-slate-200">
+                    <p className="whitespace-pre-wrap">{workflowOutput}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-5">
+                <p className="text-sm font-semibold uppercase tracking-wide text-indigo-300">Side-by-Side Model Compare</p>
+                <p className="mt-1 text-sm text-slate-400">Run one prompt against two models and pick your preferred answer.</p>
+                <Input
+                  value={comparePrompt}
+                  onChange={(event) => setComparePrompt(event.target.value)}
+                  placeholder="Prompt for comparison..."
+                  className="mt-4 h-11 border-slate-700 bg-slate-900 text-slate-100"
+                />
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <select
+                    value={compareLeftModel}
+                    onChange={(event) => setCompareLeftModel(event.target.value as "auto" | "chatgpt" | "gemini")}
+                    className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
+                  >
+                    <option value="chatgpt">Left: ChatGPT</option>
+                    <option value="gemini">Left: Gemini</option>
+                    <option value="auto">Left: Auto</option>
+                  </select>
+                  <select
+                    value={compareRightModel}
+                    onChange={(event) => setCompareRightModel(event.target.value as "auto" | "chatgpt" | "gemini")}
+                    className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
+                  >
+                    <option value="gemini">Right: Gemini</option>
+                    <option value="chatgpt">Right: ChatGPT</option>
+                    <option value="auto">Right: Auto</option>
+                  </select>
+                </div>
+                <Button type="button" className="mt-3 h-11 w-full bg-indigo-500/15 text-indigo-100 hover:bg-indigo-500/25" onClick={() => void runModelComparison()} disabled={compareLoading}>
+                  {compareLoading ? "Comparing..." : "Run Compare"}
+                </Button>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">
+                    <p className="mb-1 font-semibold text-cyan-200">Left Result</p>
+                    <p className="whitespace-pre-wrap">{compareLeftResult || "No output yet."}</p>
+                    {compareLeftResult ? <Button type="button" size="sm" className="mt-2 w-full bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => setInput(compareLeftResult)}>Use Left</Button> : null}
+                  </div>
+                  <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">
+                    <p className="mb-1 font-semibold text-fuchsia-200">Right Result</p>
+                    <p className="whitespace-pre-wrap">{compareRightResult || "No output yet."}</p>
+                    {compareRightResult ? <Button type="button" size="sm" className="mt-2 w-full bg-fuchsia-500/15 text-fuchsia-100 hover:bg-fuchsia-500/25" onClick={() => setInput(compareRightResult)}>Use Right</Button> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-5 xl:col-span-2">
+                <p className="text-sm font-semibold uppercase tracking-wide text-fuchsia-300">Interactive Knowledge Mind Map</p>
+                <p className="mt-1 text-sm text-slate-400">Click a topic node to inspect related conversation evidence.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {mindMapKeywords.length === 0 ? (
+                    <p className="text-xs text-slate-500">Start chatting to generate topic nodes.</p>
+                  ) : (
+                    mindMapKeywords.map((item) => (
+                      <button
+                        key={item.word}
+                        type="button"
+                        onClick={() => setMindMapTopic(item.word)}
+                        className={`rounded-full border px-3 py-1.5 text-sm ${
+                          mindMapTopic === item.word
+                            ? "border-fuchsia-400/70 bg-fuchsia-500/15 text-fuchsia-100"
+                            : "border-slate-700 bg-slate-900 text-slate-300 hover:border-fuchsia-400/40"
+                        }`}
+                      >
+                        {item.word} ({item.count})
+                      </button>
+                    ))
+                  )}
+                </div>
+                <div className="mt-4 rounded-md border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-300">
+                  {mindMapTopic ? (
+                    <div className="space-y-2">
+                      <p className="font-semibold text-fuchsia-200">Topic: {mindMapTopic}</p>
+                      {messages
+                        .filter((message) => message.content.toLowerCase().includes(mindMapTopic.toLowerCase()))
+                        .slice(-4)
+                        .map((message) => (
+                          <div key={message.id} className="rounded-md border border-slate-700 bg-slate-950/70 p-2">
+                            <p className="text-[11px] text-slate-400">
+                              {message.role} | {new Date(message.createdAt).toLocaleString()}
+                            </p>
+                            <p className="mt-1 line-clamp-3 whitespace-pre-wrap">{message.content}</p>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p>Select any node to view related summaries and source citations.</p>
+                  )}
                 </div>
               </div>
             </div>

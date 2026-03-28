@@ -2,9 +2,10 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth.client";
@@ -100,6 +101,16 @@ const Page = () => {
       <div className="pointer-events-none absolute -right-16 top-1/3 h-52 w-52 rounded-full bg-indigo-500/15 blur-3xl transition-transform duration-500 group-hover:scale-110" />
 
       <CardHeader className="space-y-3">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/40">
+          <Image
+            src="/hero-neon-chat.svg"
+            alt="AI sign in visual"
+            width={1200}
+            height={800}
+            className="h-auto w-full transition-transform duration-700 group-hover:scale-[1.03]"
+            priority
+          />
+        </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/70 bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
           <ShieldCheck className="size-3.5 text-emerald-600" />
           Protected sign in
@@ -178,19 +189,44 @@ const Page = () => {
           >
             {isLoading ? "Signing in..." : "Sign in"}
           </Button>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-2 text-xs text-muted-foreground">
+              <p className="mb-1 flex items-center gap-1.5 font-medium text-foreground">
+                <Sparkles className="size-3.5 text-cyan-500" />
+                Smart Memory
+              </p>
+              Continue where you left off.
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-2 text-xs text-muted-foreground">
+              <p className="mb-1 flex items-center gap-1.5 font-medium text-foreground">
+                <Zap className="size-3.5 text-fuchsia-500" />
+                Voice + Chat
+              </p>
+              Talk naturally with your AI.
+            </div>
+          </div>
         </form>
       </CardContent>
 
       <CardFooter className="justify-center text-sm">
-        <p className="text-muted-foreground transition-colors hover:text-foreground">
-          New here?{" "}
-          <Link
-            href="/auth/sign-up"
-            className="text-foreground underline decoration-cyan-500 underline-offset-4"
-          >
-            Create an account
-          </Link>
-        </p>
+        <div className="space-y-2 text-center">
+          <p className="text-muted-foreground transition-colors hover:text-foreground">
+            New here?{" "}
+            <Link
+              href="/auth/sign-up"
+              className="text-foreground underline decoration-cyan-500 underline-offset-4"
+            >
+              Create an account
+            </Link>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Want to explore first?{" "}
+            <Link href="/" className="text-foreground underline underline-offset-4">
+              Go to front page
+            </Link>
+          </p>
+        </div>
       </CardFooter>
     </Card>
   );

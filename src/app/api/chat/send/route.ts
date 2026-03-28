@@ -10,6 +10,8 @@ import { getAuthenticatedUser, unauthorized } from "@/lib/server/session";
 const sendMessageSchema = z.object({
   conversationId: z.string().optional(),
   message: z.string().trim().min(1).max(4000),
+  assistant: z.enum(["auto", "chatgpt", "gemini"]).optional(),
+  imageDataUrl: z.string().max(3_000_000).optional(),
 });
 
 function buildConversationTitle(message: string) {
@@ -64,6 +66,8 @@ export async function POST(request: Request) {
     userId: user.id,
     userMessage: parsed.data.message,
     conversationId,
+    assistant: parsed.data.assistant ?? "auto",
+    imageDataUrl: parsed.data.imageDataUrl,
   });
 
   const [assistantMessage] = await db

@@ -1,0 +1,48 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(350 230) rotate(21) scale(320 240)">
+      <stop stop-color="#22D3EE" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(900 250) rotate(151) scale(300 220)">
+      <stop stop-color="#D946EF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#D946EF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="line" x1="120" y1="350" x2="1080" y2="350" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="0.5" stop-color="#818CF8"/>
+      <stop offset="1" stop-color="#D946EF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#bg)"/>
+  <rect width="1200" height="700" fill="url(#glowA)"/>
+  <rect width="1200" height="700" fill="url(#glowB)"/>
+
+  <g stroke="url(#line)" stroke-opacity="0.7" stroke-width="2">
+    <line x1="210" y1="170" x2="450" y2="280"/>
+    <line x1="450" y1="280" x2="700" y2="210"/>
+    <line x1="700" y1="210" x2="955" y2="320"/>
+    <line x1="260" y1="430" x2="450" y2="280"/>
+    <line x1="450" y1="280" x2="640" y2="480"/>
+    <line x1="640" y1="480" x2="955" y2="320"/>
+    <line x1="260" y1="430" x2="640" y2="480"/>
+    <line x1="210" y1="170" x2="260" y2="430"/>
+  </g>
+
+  <g fill="#E2E8F0">
+    <circle cx="210" cy="170" r="14"/>
+    <circle cx="450" cy="280" r="20"/>
+    <circle cx="700" cy="210" r="14"/>
+    <circle cx="955" cy="320" r="14"/>
+    <circle cx="260" cy="430" r="14"/>
+    <circle cx="640" cy="480" r="16"/>
+  </g>
+
+  <circle cx="450" cy="280" r="88" stroke="#22D3EE" stroke-opacity="0.35" stroke-width="2"/>
+  <circle cx="450" cy="280" r="126" stroke="#818CF8" stroke-opacity="0.25" stroke-width="2" stroke-dasharray="8 8"/>
+  <circle cx="450" cy="280" r="160" stroke="#D946EF" stroke-opacity="0.2" stroke-width="2" stroke-dasharray="10 10"/>
+</svg>

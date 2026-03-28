@@ -1,0 +1,45 @@
+<svg width="1200" height="600" viewBox="0 0 1200 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgl" x1="0" y1="0" x2="1200" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#030712"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="linel" x1="104" y1="386" x2="1096" y2="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="0.5" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#D946EF"/>
+    </linearGradient>
+    <radialGradient id="glowl" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(620 250) rotate(90) scale(220 520)">
+      <stop stop-color="#22D3EE" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="600" fill="url(#bgl)"/>
+  <rect width="1200" height="600" fill="url(#glowl)"/>
+  <g stroke="#334155" stroke-opacity="0.7">
+    <path d="M96 80H1104"/>
+    <path d="M96 170H1104"/>
+    <path d="M96 260H1104"/>
+    <path d="M96 350H1104"/>
+    <path d="M96 440H1104"/>
+    <path d="M96 530H1104"/>
+    <path d="M96 80V530"/>
+    <path d="M264 80V530"/>
+    <path d="M432 80V530"/>
+    <path d="M600 80V530"/>
+    <path d="M768 80V530"/>
+    <path d="M936 80V530"/>
+    <path d="M1104 80V530"/>
+  </g>
+  <path d="M104 386L272 360L440 330L608 292L776 252L944 204L1096 150" stroke="url(#linel)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#E2E8F0">
+    <circle cx="104" cy="386" r="8"/>
+    <circle cx="272" cy="360" r="8"/>
+    <circle cx="440" cy="330" r="8"/>
+    <circle cx="608" cy="292" r="8"/>
+    <circle cx="776" cy="252" r="8"/>
+    <circle cx="944" cy="204" r="8"/>
+    <circle cx="1096" cy="150" r="8"/>
+  </g>
+  <text x="96" y="52" fill="#93C5FD" font-size="26" font-family="Arial, sans-serif">User Engagement Trend</text>
+</svg>
