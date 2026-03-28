@@ -426,7 +426,7 @@ export function AiChatDashboard({ user }: { user: User }) {
     <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.2),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#111827_100%)] p-4 text-slate-100 md:p-8">
       <div className="mx-auto grid w-full max-w-[1500px] gap-6 lg:grid-cols-[320px_1fr] xl:gap-8">
         <Card className="h-fit border-slate-700/70 bg-slate-950/80 text-slate-100 backdrop-blur">
-          <CardHeader>
+          <CardHeader className="space-y-3">
             <div className="flex items-center gap-3">
               <Avatar className="size-10">
                 <AvatarImage src={user.image ?? undefined} alt={user.name} />
@@ -902,7 +902,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                 : "One-to-one mode is OFF: tap Talk each time you want to speak."}
             </p>
             {cameraError ? <p className="text-xs text-rose-300">Camera: {cameraError}</p> : null}
-            <div className="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+            <div className="mt-2 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Workspace Pages</p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {workspacePages.map((page) => (
@@ -919,7 +919,7 @@ export function AiChatDashboard({ user }: { user: User }) {
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-5">
+          <CardContent className="mt-4 space-y-7">
             <div className="space-y-4">
               <div className="space-y-4">
                 <ScrollArea className="h-[560px] rounded-lg border border-slate-700 bg-[#050914] p-4">
