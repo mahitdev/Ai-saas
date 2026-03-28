@@ -58,8 +58,6 @@ type Message = {
   createdAt: string;
 };
 
-type LogicBlockType = "web_search" | "summarize" | "draft_email";
-
 type ConversationPayload = {
   conversations: Conversation[];
   memory: string;
@@ -102,20 +100,6 @@ export function AiChatDashboard({ user }: { user: User }) {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [sendLiveFrame, setSendLiveFrame] = useState(true);
-  const [logicBlocks, setLogicBlocks] = useState<Array<{ id: string; type: LogicBlockType }>>([
-    { id: "b1", type: "web_search" },
-    { id: "b2", type: "summarize" },
-  ]);
-  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
-  const [workflowPrompt, setWorkflowPrompt] = useState("");
-  const [workflowOutput, setWorkflowOutput] = useState("");
-  const [comparePrompt, setComparePrompt] = useState("");
-  const [compareLeftModel, setCompareLeftModel] = useState<"auto" | "chatgpt" | "gemini">("chatgpt");
-  const [compareRightModel, setCompareRightModel] = useState<"auto" | "chatgpt" | "gemini">("gemini");
-  const [compareLeftResult, setCompareLeftResult] = useState("");
-  const [compareRightResult, setCompareRightResult] = useState("");
-  const [compareLoading, setCompareLoading] = useState(false);
-  const [mindMapTopic, setMindMapTopic] = useState<string | null>(null);
   const [adaptiveRole, setAdaptiveRole] = useState<"developer" | "manager">(
     /dev|engineer|tech|code/i.test(user.email) ? "developer" : "manager",
   );
@@ -142,24 +126,10 @@ export function AiChatDashboard({ user }: { user: User }) {
     () => conversations.find((conversation) => conversation.id === activeConversationId) ?? null,
     [conversations, activeConversationId],
   );
-  const mindMapKeywords = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const message of messages) {
-      const words = message.content
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, " ")
-        .split(/\s+/)
-        .filter((word) => word.length > 4 && !["about", "there", "which", "would", "could", "their", "while", "where"].includes(word));
-      for (const word of words) {
-        counts.set(word, (counts.get(word) ?? 0) + 1);
-      }
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([word, count]) => ({ word, count }));
-  }, [messages]);
   const workspacePages = [
+    { href: "/dashboard/comparison", title: "Comparison", description: "Compare model outputs" },
+    { href: "/dashboard/mind-map", title: "Mind Map", description: "Explore topic graph" },
+    { href: "/dashboard/logic-builder", title: "Logic Builder", description: "Build AI workflows" },
     { href: "/dashboard/ubiquity", title: "Ubiquity", description: "Extensions and plugins" },
     { href: "/dashboard/voice", title: "Voice Actions", description: "Phone and widget commands" },
     { href: "/dashboard/semantic", title: "Semantic Layer", description: "Business formula mapping" },
@@ -451,69 +421,6 @@ export function AiChatDashboard({ user }: { user: User }) {
     await sendMessageText(messageText, imageToSend);
   }
 
-  function addLogicBlock(type: LogicBlockType) {
-    setLogicBlocks((previous) => [...previous, { id: crypto.randomUUID(), type }]);
-  }
-
-  function moveLogicBlock(fromId: string, toId: string) {
-    setLogicBlocks((previous) => {
-      const fromIndex = previous.findIndex((block) => block.id === fromId);
-      const toIndex = previous.findIndex((block) => block.id === toId);
-      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return previous;
-      const next = [...previous];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-  }
-
-  function runLogicWorkflow() {
-    if (!workflowPrompt.trim()) {
-      toast.error("Add a workflow prompt first.");
-      return;
-    }
-
-    let output = workflowPrompt.trim();
-    for (const block of logicBlocks) {
-      if (block.type === "web_search") {
-        output = `Search findings about "${output}":\n- Key trend\n- Supporting facts\n- Actionable insights`;
-      } else if (block.type === "summarize") {
-        output = `Summary:\n${output.slice(0, 240)}...`;
-      } else if (block.type === "draft_email") {
-        output = `Subject: Quick Update\n\nHi Team,\n\n${output}\n\nBest,\n${user.name}`;
-      }
-    }
-    setWorkflowOutput(output);
-  }
-
-  async function runModelComparison() {
-    if (!comparePrompt.trim() || compareLoading) return;
-    setCompareLoading(true);
-    setCompareLeftResult("");
-    setCompareRightResult("");
-
-    try {
-      const response = await fetch("/api/chat/compare", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          prompt: comparePrompt.trim(),
-          leftModel: compareLeftModel,
-          rightModel: compareRightModel,
-          imageDataUrl: capturedImage ?? (cameraEnabled && sendLiveFrame ? captureFrame() : undefined),
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to compare models");
-      const payload = (await response.json()) as { leftResult: string; rightResult: string };
-      setCompareLeftResult(payload.leftResult);
-      setCompareRightResult(payload.rightResult);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to compare models");
-    } finally {
-      setCompareLoading(false);
-    }
-  }
-
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.2),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#111827_100%)] p-4 text-slate-100 md:p-8">
       <div className="mx-auto grid w-full max-w-[1500px] gap-6 lg:grid-cols-[320px_1fr] xl:gap-8">
@@ -597,6 +504,36 @@ export function AiChatDashboard({ user }: { user: User }) {
                 <a href="/dashboard/ubiquity">
                   <Sparkles className="mr-2 size-4" />
                   Ubiquity Layer
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/comparison">
+                  <Brain className="mr-2 size-4" />
+                  Comparison
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/mind-map">
+                  <Sparkles className="mr-2 size-4" />
+                  Mind Map
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/logic-builder">
+                  <Cpu className="mr-2 size-4" />
+                  Logic Builder
                 </a>
               </Button>
               <Button
@@ -1175,138 +1112,19 @@ export function AiChatDashboard({ user }: { user: User }) {
               </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-2">
-              <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-5">
-                <p className="text-sm font-semibold uppercase tracking-wide text-cyan-300">Logic Blocks Builder</p>
-                <p className="mt-1 text-sm text-slate-400">Drag blocks to reorder an AI workflow chain.</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="outline" className="border-slate-700 bg-slate-900 text-slate-200" onClick={() => addLogicBlock("web_search")}>+ Web Search</Button>
-                  <Button type="button" size="sm" variant="outline" className="border-slate-700 bg-slate-900 text-slate-200" onClick={() => addLogicBlock("summarize")}>+ Summarize</Button>
-                  <Button type="button" size="sm" variant="outline" className="border-slate-700 bg-slate-900 text-slate-200" onClick={() => addLogicBlock("draft_email")}>+ Draft Email</Button>
-                </div>
-                <div className="mt-4 space-y-2">
-                  {logicBlocks.map((block, index) => (
-                    <div
-                      key={block.id}
-                      draggable
-                      onDragStart={() => setDraggingBlockId(block.id)}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={() => {
-                        if (draggingBlockId) moveLogicBlock(draggingBlockId, block.id);
-                        setDraggingBlockId(null);
-                      }}
-                      className="cursor-move rounded-md border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
-                    >
-                      {index + 1}. {block.type.replace("_", " ")}
-                    </div>
-                  ))}
-                </div>
-                <Input
-                  value={workflowPrompt}
-                  onChange={(event) => setWorkflowPrompt(event.target.value)}
-                  placeholder="Workflow input..."
-                  className="mt-4 h-11 border-slate-700 bg-slate-900 text-slate-100"
-                />
-                <Button type="button" className="mt-3 h-11 w-full bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={runLogicWorkflow}>
-                  Run Workflow
-                </Button>
-                {workflowOutput ? (
-                  <div className="mt-3 rounded-md border border-cyan-500/35 bg-slate-900/70 p-3 text-sm text-slate-200">
-                    <p className="whitespace-pre-wrap">{workflowOutput}</p>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-5">
-                <p className="text-sm font-semibold uppercase tracking-wide text-indigo-300">Side-by-Side Model Compare</p>
-                <p className="mt-1 text-sm text-slate-400">Run one prompt against two models and pick your preferred answer.</p>
-                <Input
-                  value={comparePrompt}
-                  onChange={(event) => setComparePrompt(event.target.value)}
-                  placeholder="Prompt for comparison..."
-                  className="mt-4 h-11 border-slate-700 bg-slate-900 text-slate-100"
-                />
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <select
-                    value={compareLeftModel}
-                    onChange={(event) => setCompareLeftModel(event.target.value as "auto" | "chatgpt" | "gemini")}
-                    className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
-                  >
-                    <option value="chatgpt">Left: ChatGPT</option>
-                    <option value="gemini">Left: Gemini</option>
-                    <option value="auto">Left: Auto</option>
-                  </select>
-                  <select
-                    value={compareRightModel}
-                    onChange={(event) => setCompareRightModel(event.target.value as "auto" | "chatgpt" | "gemini")}
-                    className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
-                  >
-                    <option value="gemini">Right: Gemini</option>
-                    <option value="chatgpt">Right: ChatGPT</option>
-                    <option value="auto">Right: Auto</option>
-                  </select>
-                </div>
-                <Button type="button" className="mt-3 h-11 w-full bg-indigo-500/15 text-indigo-100 hover:bg-indigo-500/25" onClick={() => void runModelComparison()} disabled={compareLoading}>
-                  {compareLoading ? "Comparing..." : "Run Compare"}
-                </Button>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">
-                    <p className="mb-1 font-semibold text-cyan-200">Left Result</p>
-                    <p className="whitespace-pre-wrap">{compareLeftResult || "No output yet."}</p>
-                    {compareLeftResult ? <Button type="button" size="sm" className="mt-2 w-full bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => setInput(compareLeftResult)}>Use Left</Button> : null}
-                  </div>
-                  <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">
-                    <p className="mb-1 font-semibold text-fuchsia-200">Right Result</p>
-                    <p className="whitespace-pre-wrap">{compareRightResult || "No output yet."}</p>
-                    {compareRightResult ? <Button type="button" size="sm" className="mt-2 w-full bg-fuchsia-500/15 text-fuchsia-100 hover:bg-fuchsia-500/25" onClick={() => setInput(compareRightResult)}>Use Right</Button> : null}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-5 xl:col-span-2">
-                <p className="text-sm font-semibold uppercase tracking-wide text-fuchsia-300">Interactive Knowledge Mind Map</p>
-                <p className="mt-1 text-sm text-slate-400">Click a topic node to inspect related conversation evidence.</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {mindMapKeywords.length === 0 ? (
-                    <p className="text-xs text-slate-500">Start chatting to generate topic nodes.</p>
-                  ) : (
-                    mindMapKeywords.map((item) => (
-                      <button
-                        key={item.word}
-                        type="button"
-                        onClick={() => setMindMapTopic(item.word)}
-                        className={`rounded-full border px-3 py-1.5 text-sm ${
-                          mindMapTopic === item.word
-                            ? "border-fuchsia-400/70 bg-fuchsia-500/15 text-fuchsia-100"
-                            : "border-slate-700 bg-slate-900 text-slate-300 hover:border-fuchsia-400/40"
-                        }`}
-                      >
-                        {item.word} ({item.count})
-                      </button>
-                    ))
-                  )}
-                </div>
-                <div className="mt-4 rounded-md border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-300">
-                  {mindMapTopic ? (
-                    <div className="space-y-2">
-                      <p className="font-semibold text-fuchsia-200">Topic: {mindMapTopic}</p>
-                      {messages
-                        .filter((message) => message.content.toLowerCase().includes(mindMapTopic.toLowerCase()))
-                        .slice(-4)
-                        .map((message) => (
-                          <div key={message.id} className="rounded-md border border-slate-700 bg-slate-950/70 p-2">
-                            <p className="text-[11px] text-slate-400">
-                              {message.role} | {new Date(message.createdAt).toLocaleString()}
-                            </p>
-                            <p className="mt-1 line-clamp-3 whitespace-pre-wrap">{message.content}</p>
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <p>Select any node to view related summaries and source citations.</p>
-                  )}
-                </div>
-              </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <a href="/dashboard/comparison" className="rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-indigo-400/50">
+                <p className="text-sm font-semibold uppercase tracking-wide text-indigo-300">Model Comparison</p>
+                <p className="mt-2 text-sm text-slate-400">Use side-by-side model output on a dedicated page.</p>
+              </a>
+              <a href="/dashboard/mind-map" className="rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-fuchsia-400/50">
+                <p className="text-sm font-semibold uppercase tracking-wide text-fuchsia-300">Knowledge Mind Map</p>
+                <p className="mt-2 text-sm text-slate-400">Explore topic graph and source snippets in one place.</p>
+              </a>
+              <a href="/dashboard/logic-builder" className="rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-cyan-400/50">
+                <p className="text-sm font-semibold uppercase tracking-wide text-cyan-300">Logic Builder</p>
+                <p className="mt-2 text-sm text-slate-400">Design and run chained AI workflow blocks separately.</p>
+              </a>
             </div>
           </CardContent>
         </Card>
