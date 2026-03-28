@@ -17,12 +17,35 @@ export function DeveloperPage() {
   const [sandboxRequest, setSandboxRequest] = useState('{ "prompt": "Hello API" }');
   const [sandboxResponse, setSandboxResponse] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
+  const [burnForecast, setBurnForecast] = useState<{
+    daysUntilExhausted: number;
+    dailyRate: number;
+    creditsRemaining: number;
+    suggestion: string;
+  } | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setLogs((prev) => [`[${new Date().toLocaleTimeString()}] POST /webhooks/task-finished -> 200 OK`, ...prev].slice(0, 12));
     }, 4000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    async function loadForecast() {
+      const response = await fetch("/api/usage/predict", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as {
+        forecast: {
+          daysUntilExhausted: number;
+          dailyRate: number;
+          creditsRemaining: number;
+          suggestion: string;
+        };
+      };
+      setBurnForecast(payload.forecast);
+    }
+    void loadForecast();
   }, []);
 
   const totalLimit = useMemo(() => keys.reduce((sum, key) => sum + key.limit, 0), [keys]);
@@ -129,9 +152,33 @@ export function DeveloperPage() {
               <pre className="overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-2 text-xs text-slate-200">{sandboxResponse || "No sandbox call yet."}</pre>
             </CardContent>
           </Card>
+
+          <Card className="border-slate-700/70 bg-slate-950/80">
+            <CardHeader>
+              <CardTitle>Smart Routing + Burn Rate</CardTitle>
+              <CardDescription className="text-slate-400">
+                Simple tasks route to fast models, complex tasks to deep reasoning models.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-2 text-slate-200">
+                Token caching and batching are active in the AI pipeline for repeated prompts.
+              </div>
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-2 text-slate-200">
+                Credits remaining: {burnForecast?.creditsRemaining ?? 0}
+              </div>
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-2 text-slate-200">
+                Daily burn rate: {burnForecast?.dailyRate ?? 0} tokens/day
+              </div>
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-amber-100">
+                {burnForecast
+                  ? `Predictive burn rate: you may run out in ${burnForecast.daysUntilExhausted} days. ${burnForecast.suggestion}`
+                  : "Forecast unavailable."}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </main>
   );
 }
-

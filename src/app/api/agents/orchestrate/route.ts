@@ -6,7 +6,34 @@ import { getAuthenticatedUser, unauthorized } from "@/lib/server/session";
 const orchestrateSchema = z.object({
   task: z.string().trim().min(1).max(4000),
   agents: z.array(z.enum(["researcher", "writer", "compliance"])).min(1).max(8),
+  checkpoints: z.array(z.number().int().min(0).max(7)).optional().default([]),
+  executionId: z.string().optional(),
+  approved: z.boolean().optional().default(false),
 });
+
+type ExecutionState = {
+  id: string;
+  userId: string;
+  task: string;
+  agents: Array<"researcher" | "writer" | "compliance">;
+  handoffs: Array<{ agent: string; startedAt: string; finishedAt: string; output: string }>;
+  baton: string;
+  cursor: number;
+  checkpoints: number[];
+};
+
+const executionStore = new Map<string, ExecutionState>();
+
+function runAgent(agent: "researcher" | "writer" | "compliance", baton: string) {
+  if (agent === "researcher") {
+    return `Research Notes:\n- Key context about: ${baton}\n- Market trend snapshot\n- Risks and opportunities`;
+  }
+  if (agent === "writer") {
+    return `Draft Output:\n${baton}\n\nFinal narrative:\nThis plan addresses user intent with clear actions and timeline.`;
+  }
+  const riskFlags = /(guaranteed|secret|bypass|hack|illegal)/i.test(baton) ? "flagged" : "clear";
+  return `Compliance Review (${riskFlags}):\n${baton}\n\nChecks: policy alignment, safety language, legal tone.`;
+}
 
 export async function POST(request: Request) {
   const user = await getAuthenticatedUser();
@@ -18,26 +45,59 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid orchestrator payload" }, { status: 400 });
   }
 
-  let baton = parsed.data.task;
-  const handoffs: Array<{ agent: string; startedAt: string; finishedAt: string; output: string }> = [];
-
-  for (const agent of parsed.data.agents) {
-    const startedAt = new Date().toISOString();
-    if (agent === "researcher") {
-      baton = `Research Notes:\n- Key context about: ${baton}\n- Market trend snapshot\n- Risks and opportunities`;
-    } else if (agent === "writer") {
-      baton = `Draft Output:\n${baton}\n\nFinal narrative:\nThis plan addresses user intent with clear actions and timeline.`;
-    } else if (agent === "compliance") {
-      const riskFlags = /(guaranteed|secret|bypass|hack|illegal)/i.test(baton) ? "flagged" : "clear";
-      baton = `Compliance Review (${riskFlags}):\n${baton}\n\nChecks: policy alignment, safety language, legal tone.`;
+  let state: ExecutionState;
+  if (parsed.data.executionId) {
+    const existing = executionStore.get(parsed.data.executionId);
+    if (!existing || existing.userId !== user.id) {
+      return NextResponse.json({ error: "Execution not found" }, { status: 404 });
     }
-    const finishedAt = new Date().toISOString();
-    handoffs.push({ agent, startedAt, finishedAt, output: baton });
+    state = existing;
+  } else {
+    const id = `exec_${crypto.randomUUID().slice(0, 8)}`;
+    state = {
+      id,
+      userId: user.id,
+      task: parsed.data.task,
+      agents: parsed.data.agents,
+      handoffs: [],
+      baton: parsed.data.task,
+      cursor: 0,
+      checkpoints: parsed.data.checkpoints,
+    };
+    executionStore.set(id, state);
   }
 
+  for (let index = state.cursor; index < state.agents.length; index += 1) {
+    if (state.checkpoints.includes(index) && !parsed.data.approved) {
+      state.cursor = index;
+      executionStore.set(state.id, state);
+      return NextResponse.json({
+        paused: true,
+        reason: "human_approval_required",
+        executionId: state.id,
+        pendingAgent: state.agents[index],
+        handoffs: state.handoffs,
+      });
+    }
+
+    if (state.checkpoints.includes(index) && parsed.data.approved) {
+      parsed.data.approved = false;
+    }
+
+    const agent = state.agents[index];
+    const startedAt = new Date().toISOString();
+    state.baton = runAgent(agent, state.baton);
+    const finishedAt = new Date().toISOString();
+    state.handoffs.push({ agent, startedAt, finishedAt, output: state.baton });
+    state.cursor = index + 1;
+  }
+
+  executionStore.delete(state.id);
+
   return NextResponse.json({
-    result: baton,
-    handoffs,
+    result: state.baton,
+    handoffs: state.handoffs,
+    executionId: state.id,
+    paused: false,
   });
 }
-

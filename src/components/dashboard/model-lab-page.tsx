@@ -10,6 +10,20 @@ export function ModelLabPage() {
   const [engine, setEngine] = useState<"flash" | "pro">("flash");
   const [knowledgeFiles, setKnowledgeFiles] = useState<string[]>([]);
   const [styleProfileEnabled, setStyleProfileEnabled] = useState(false);
+  const [industry, setIndustry] = useState<"hr" | "legal" | "finance" | "general">("general");
+  const [domainInput, setDomainInput] = useState("Review this policy document for risk and required actions.");
+  const [domainOutput, setDomainOutput] = useState("");
+  const [playbooks, setPlaybooks] = useState<string[]>([]);
+
+  async function runIndustryTemplate() {
+    const response = await fetch("/api/vertical/templates", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ industry, input: domainInput }),
+    });
+    const payload = (await response.json()) as { template?: string; output?: string; error?: string };
+    setDomainOutput(payload.error ? payload.error : `${payload.template}\n${payload.output}`);
+  }
 
   return (
     <main className="min-h-svh bg-[linear-gradient(180deg,#020617_0%,#111827_100%)] p-4 text-slate-100 md:p-8">
@@ -75,6 +89,7 @@ export function ModelLabPage() {
                   const files = Array.from(event.target.files ?? []);
                   if (files.length === 0) return;
                   setKnowledgeFiles((prev) => [...files.map((file) => file.name), ...prev]);
+                  setPlaybooks((prev) => [...files.map((file) => `Playbook: ${file.name}`), ...prev]);
                 }}
               />
               Drag/drop docs here or click to upload
@@ -90,10 +105,44 @@ export function ModelLabPage() {
                 ))
               )}
             </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/70 p-2 text-xs text-slate-300">
+              Domain-trained RAG playbooks loaded: {playbooks.length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-700/70 bg-slate-950/80">
+          <CardHeader>
+            <CardTitle>Vertical Deep Logic Templates</CardTitle>
+            <CardDescription className="text-slate-400">
+              Industry-specific logic: HR bias detection, legal redlining, finance control review.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <select
+              value={industry}
+              onChange={(event) => setIndustry(event.target.value as "hr" | "legal" | "finance" | "general")}
+              className="h-10 rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-200"
+            >
+              <option value="general">General</option>
+              <option value="hr">HR: Bias Detection</option>
+              <option value="legal">Legal: Contract Redlining</option>
+              <option value="finance">Finance: Control Review</option>
+            </select>
+            <textarea
+              value={domainInput}
+              onChange={(event) => setDomainInput(event.target.value)}
+              className="min-h-28 w-full rounded-md border border-slate-700 bg-slate-900 p-2 text-sm text-slate-100"
+            />
+            <Button className="bg-fuchsia-500/15 text-fuchsia-100 hover:bg-fuchsia-500/25" onClick={() => void runIndustryTemplate()}>
+              Run Industry Template
+            </Button>
+            <pre className="overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-2 text-xs text-slate-200">
+              {domainOutput || "Template output will appear here."}
+            </pre>
           </CardContent>
         </Card>
       </div>
     </main>
   );
 }
-

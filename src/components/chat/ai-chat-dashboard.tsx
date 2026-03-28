@@ -116,6 +116,12 @@ export function AiChatDashboard({ user }: { user: User }) {
   const [compareRightResult, setCompareRightResult] = useState("");
   const [compareLoading, setCompareLoading] = useState(false);
   const [mindMapTopic, setMindMapTopic] = useState<string | null>(null);
+  const [adaptiveRole, setAdaptiveRole] = useState<"developer" | "manager">(
+    /dev|engineer|tech|code/i.test(user.email) ? "developer" : "manager",
+  );
+  const [detectedIntent, setDetectedIntent] = useState<
+    "general_chat" | "budget_analysis" | "developer_ops" | "manager_overview"
+  >("general_chat");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
@@ -218,6 +224,23 @@ export function AiChatDashboard({ user }: { user: User }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const lower = input.toLowerCase();
+    if (/budget|profit|revenue|expense|forecast|roi|cost/.test(lower)) {
+      setDetectedIntent("budget_analysis");
+      return;
+    }
+    if (/debug|error|api|deploy|build|code|stack/.test(lower)) {
+      setDetectedIntent("developer_ops");
+      return;
+    }
+    if (/roadmap|team|kpi|strategy|quarter|report/.test(lower)) {
+      setDetectedIntent("manager_overview");
+      return;
+    }
+    setDetectedIntent("general_chat");
+  }, [input]);
 
   useEffect(() => {
     return () => {
@@ -356,6 +379,7 @@ export function AiChatDashboard({ user }: { user: User }) {
         userMessage: Message;
         assistantMessage: Message;
         memorySummary: string;
+        onboardingAha?: string | null;
       };
 
       if (!activeConversationId) {
@@ -364,6 +388,9 @@ export function AiChatDashboard({ user }: { user: User }) {
       setActiveConversationId(payload.conversationId);
       setMessages((previous) => [...previous, payload.userMessage, payload.assistantMessage]);
       setMemory(payload.memorySummary);
+      if (payload.onboardingAha) {
+        toast.success(payload.onboardingAha);
+      }
       await speak(payload.assistantMessage.content);
       if (conversationMode && directVoiceMode && !listening) {
         startListening();
@@ -862,6 +889,14 @@ export function AiChatDashboard({ user }: { user: User }) {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
+                <select
+                  value={adaptiveRole}
+                  onChange={(event) => setAdaptiveRole(event.target.value as "developer" | "manager")}
+                  className="h-9 rounded-md border border-slate-700 bg-slate-900 px-2 text-xs text-slate-200"
+                >
+                  <option value="developer">Developer Layout</option>
+                  <option value="manager">Manager Layout</option>
+                </select>
                 <Button
                   type="button"
                   variant={listening ? "default" : "outline"}
@@ -911,6 +946,12 @@ export function AiChatDashboard({ user }: { user: User }) {
             </div>
             <Badge variant="outline" className="w-fit border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
               Memory: {memory ? `${memory.split("\n").length} notes` : "empty"}
+            </Badge>
+            <Badge variant="outline" className="w-fit border-indigo-400/40 bg-indigo-500/10 text-indigo-200">
+              Role: {adaptiveRole}
+            </Badge>
+            <Badge variant="outline" className="w-fit border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-200">
+              Intent: {detectedIntent.replace("_", " ")}
             </Badge>
             <p className="text-xs text-slate-400">
               {directVoiceMode
@@ -1066,6 +1107,42 @@ export function AiChatDashboard({ user }: { user: User }) {
                   <p className="truncate text-sm font-medium text-cyan-100">{activeConversation?.title ?? "No chat selected"}</p>
                   <p className="mt-2 text-xs text-slate-400">Messages: {messages.length}</p>
                 </div>
+
+                {adaptiveRole === "developer" ? (
+                  <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
+                    <p className="text-xs font-semibold tracking-wide text-emerald-300 uppercase">Developer View</p>
+                    <p className="mt-2 text-xs text-slate-300">API status: healthy</p>
+                    <pre className="mt-2 overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-2 text-[11px] text-emerald-100">
+{`[log] chat.send ok\n[log] scrubber active\n[log] model=${selectedAssistant}`}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
+                    <p className="text-xs font-semibold tracking-wide text-amber-300 uppercase">Manager View</p>
+                    <p className="mt-2 text-xs text-slate-300">ROI snapshot and outcomes</p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
+                        <p className="text-slate-400">Hours Saved</p>
+                        <p className="font-semibold text-amber-100">{Math.max(1, Math.round(messages.length / 4))}h</p>
+                      </div>
+                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
+                        <p className="text-slate-400">ROI</p>
+                        <p className="font-semibold text-amber-100">${Math.max(25, messages.length * 3)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {detectedIntent === "budget_analysis" ? (
+                  <div className="rounded-lg border border-fuchsia-500/35 bg-slate-950/70 p-4">
+                    <p className="text-xs font-semibold tracking-wide text-fuchsia-300 uppercase">Intent-Driven Budget Grid</p>
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-200">
+                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">Revenue: $120,000</div>
+                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">COGS: $48,000</div>
+                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">Profit: $72,000</div>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                   <p className="text-xs font-semibold tracking-wide text-indigo-300 uppercase">Section 2: Memory</p>

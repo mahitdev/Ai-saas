@@ -25,6 +25,10 @@ export function OrchestratorPage() {
   const [handoffs, setHandoffs] = useState<Array<{ agent: string; startedAt: string; finishedAt: string; output: string }>>([]);
   const [result, setResult] = useState("");
   const [running, setRunning] = useState(false);
+  const [hitlEnabled, setHitlEnabled] = useState(true);
+  const [checkpoints, setCheckpoints] = useState<number[]>([1]);
+  const [executionId, setExecutionId] = useState<string | null>(null);
+  const [pendingAgent, setPendingAgent] = useState<string | null>(null);
 
   function addAgent(type: AgentType) {
     setAgents((prev) => [...prev, { id: crypto.randomUUID(), type }]);
@@ -42,25 +46,44 @@ export function OrchestratorPage() {
     });
   }
 
-  async function runWorkflow() {
-    if (!task.trim() || running) return;
+  async function runWorkflow(approve = false) {
+    if ((!task.trim() && !executionId) || running) return;
     setRunning(true);
-    setResult("");
-    setHandoffs([]);
+    if (!approve) {
+      setResult("");
+      setHandoffs([]);
+      setPendingAgent(null);
+    }
     try {
       const response = await fetch("/api/agents/orchestrate", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          task: task.trim(),
+          task: task.trim() || "Continue workflow",
           agents: agents.map((a) => a.type),
+          checkpoints: hitlEnabled ? checkpoints : [],
+          executionId: executionId ?? undefined,
+          approved: approve,
         }),
       });
       if (!response.ok) throw new Error("Failed to run orchestrator");
       const payload = (await response.json()) as {
         result: string;
         handoffs: Array<{ agent: string; startedAt: string; finishedAt: string; output: string }>;
+        paused?: boolean;
+        reason?: string;
+        executionId?: string;
+        pendingAgent?: string;
       };
+      if (payload.paused) {
+        setExecutionId(payload.executionId ?? null);
+        setPendingAgent(payload.pendingAgent ?? "unknown");
+        setHandoffs(payload.handoffs ?? []);
+        setResult("Execution paused for human approval checkpoint.");
+        return;
+      }
+      setExecutionId(null);
+      setPendingAgent(null);
       setResult(payload.result);
       setHandoffs(payload.handoffs);
     } finally {
@@ -116,14 +139,56 @@ export function OrchestratorPage() {
                 >
                   <span className="inline-flex size-6 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-cyan-200">{index + 1}</span>
                   <span className="text-slate-200">{AGENT_LABELS[agent.type]}</span>
+                  <button
+                    type="button"
+                    className={`rounded px-2 py-1 text-[10px] ${
+                      checkpoints.includes(index)
+                        ? "border border-amber-500/60 bg-amber-500/15 text-amber-200"
+                        : "border border-slate-700 bg-slate-900 text-slate-400"
+                    }`}
+                    onClick={() =>
+                      setCheckpoints((previous) =>
+                        previous.includes(index)
+                          ? previous.filter((item) => item !== index)
+                          : [...previous, index].sort((a, b) => a - b),
+                      )
+                    }
+                  >
+                    {checkpoints.includes(index) ? "HITL Checkpoint" : "Add Checkpoint"}
+                  </button>
                   <span className="ml-auto text-xs text-slate-500">Drag to reorder</span>
                 </div>
               ))}
             </div>
 
+            <div className="rounded-md border border-slate-700 bg-slate-900/60 p-2 text-xs text-slate-300">
+              <p>Visual Workflow Designer</p>
+              <p className="mt-1">
+                {agents.map((agent) => AGENT_LABELS[agent.type]).join(" -> ")}
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              variant={hitlEnabled ? "default" : "outline"}
+              className={hitlEnabled ? "bg-amber-500/20 text-amber-100" : "border-slate-700 bg-slate-900 text-slate-200"}
+              onClick={() => setHitlEnabled((current) => !current)}
+            >
+              {hitlEnabled ? "HITL: ON" : "HITL: OFF"}
+            </Button>
+
             <Button className="h-11 w-full bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => void runWorkflow()} disabled={running}>
               {running ? "Running..." : "Run Agent Squad"}
             </Button>
+            {pendingAgent ? (
+              <Button
+                className="h-11 w-full bg-amber-500/20 text-amber-100 hover:bg-amber-500/30"
+                onClick={() => void runWorkflow(true)}
+                disabled={running}
+              >
+                Approve & Continue ({pendingAgent})
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
 

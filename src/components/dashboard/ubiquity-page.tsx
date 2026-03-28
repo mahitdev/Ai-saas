@@ -18,6 +18,10 @@ export function UbiquityPage() {
   const [botReply, setBotReply] = useState("");
   const [command, setCommand] = useState("");
   const [commandOutput, setCommandOutput] = useState("");
+  const [pageTitle, setPageTitle] = useState("LinkedIn - Product Manager Profile");
+  const [pageUrl, setPageUrl] = useState("https://www.linkedin.com/in/example-profile");
+  const [highlightedText, setHighlightedText] = useState("Growth-focused PM with 7 years of SaaS experience.");
+  const [contextHelp, setContextHelp] = useState("");
 
   const quickCommands = useMemo(
     () => ["/summarize-last-meeting", "/draft-followup-email", "/extract-action-items", "/status-report"],
@@ -70,6 +74,20 @@ export function UbiquityPage() {
       return;
     }
     setCommandOutput(`Command executed: ${command}`);
+  }
+
+  async function analyzeBrowserContext() {
+    const response = await fetch("/api/extensions/contextual-help", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        pageTitle,
+        pageUrl,
+        highlightedText,
+      }),
+    });
+    const payload = (await response.json()) as { suggestion?: string; error?: string };
+    setContextHelp(payload.suggestion ?? payload.error ?? "No contextual suggestion.");
   }
 
   return (
@@ -205,6 +223,29 @@ export function UbiquityPage() {
               <pre className="overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-2 text-xs text-slate-200">
                 {botReply || "No bot reply yet."}
               </pre>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-700/70 bg-slate-950/80">
+            <CardHeader>
+              <CardTitle>Agentic Browser Extension + Side Panel</CardTitle>
+              <CardDescription className="text-slate-400">
+                Context-aware assistance from active website content in a browser side panel.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Input value={pageTitle} onChange={(event) => setPageTitle(event.target.value)} className="border-slate-700 bg-slate-900 text-slate-100" />
+              <Input value={pageUrl} onChange={(event) => setPageUrl(event.target.value)} className="border-slate-700 bg-slate-900 text-slate-100" />
+              <Input value={highlightedText} onChange={(event) => setHighlightedText(event.target.value)} className="border-slate-700 bg-slate-900 text-slate-100" />
+              <Button className="bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => void analyzeBrowserContext()}>
+                Analyze Current Page Context
+              </Button>
+              <pre className="overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-2 text-xs text-slate-200">
+                {contextHelp || "No context help yet."}
+              </pre>
+              <p className="text-xs text-slate-400">
+                Side-panel mode: available. The extension can slide out while users browse other websites.
+              </p>
             </CardContent>
           </Card>
         </div>

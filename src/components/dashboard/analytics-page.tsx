@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const weeklyHours = [2, 3, 4, 5, 6, 7, 8];
 const tokenUsage = [900, 1200, 1400, 3900, 1800, 1700, 1600];
@@ -21,6 +23,45 @@ export function AnalyticsPage() {
   const anomalyDays = tokenUsage
     .map((value, index) => ({ value, index }))
     .filter((item) => item.value > 3000);
+  const [hourlyRate, setHourlyRate] = useState("35");
+  const [subscriptionCost, setSubscriptionCost] = useState("49");
+  const [taskPrice, setTaskPrice] = useState("1");
+  const [roiData, setRoiData] = useState<{
+    monthly?: {
+      successfulTasks: number;
+      outcomeBill: number;
+      hoursSaved: number;
+      totalSavings: number;
+    };
+    esg?: { carbonFootprintKgCo2e: number; badge: string };
+  }>({});
+
+  const loadRoi = useCallback(async () => {
+    const response = await fetch("/api/business/roi", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        hourlyRate: Number(hourlyRate),
+        subscriptionCost: Number(subscriptionCost),
+        successfulTaskPrice: Number(taskPrice),
+      }),
+    });
+    if (!response.ok) return;
+    const payload = (await response.json()) as {
+      monthly: {
+        successfulTasks: number;
+        outcomeBill: number;
+        hoursSaved: number;
+        totalSavings: number;
+      };
+      esg: { carbonFootprintKgCo2e: number; badge: string };
+    };
+    setRoiData(payload);
+  }, [hourlyRate, subscriptionCost, taskPrice]);
+
+  useEffect(() => {
+    void loadRoi();
+  }, [loadRoi]);
 
   return (
     <main className="min-h-svh bg-[linear-gradient(180deg,#020617_0%,#111827_100%)] p-4 text-slate-100 md:p-8">
@@ -100,8 +141,41 @@ export function AnalyticsPage() {
             ))}
           </CardContent>
         </Card>
+
+        <Card className="border-slate-700/70 bg-slate-950/80">
+          <CardHeader>
+            <CardTitle>Outcome Pricing + ROI + ESG</CardTitle>
+            <CardDescription className="text-slate-400">
+              (Hours Saved x Hourly Rate) - Subscription Cost with outcome-based pricing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-2 md:grid-cols-3">
+              <Input value={hourlyRate} onChange={(event) => setHourlyRate(event.target.value)} placeholder="Hourly rate" className="border-slate-700 bg-slate-900 text-slate-100" />
+              <Input value={subscriptionCost} onChange={(event) => setSubscriptionCost(event.target.value)} placeholder="Subscription cost" className="border-slate-700 bg-slate-900 text-slate-100" />
+              <Input value={taskPrice} onChange={(event) => setTaskPrice(event.target.value)} placeholder="Task success price" className="border-slate-700 bg-slate-900 text-slate-100" />
+            </div>
+            <Button className="bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => void loadRoi()}>
+              Recalculate ROI
+            </Button>
+            <div className="grid gap-2 md:grid-cols-3">
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+                <p className="text-xs text-slate-400">Successful Tasks</p>
+                <p className="text-xl font-semibold text-cyan-100">{roiData.monthly?.successfulTasks ?? 0}</p>
+              </div>
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+                <p className="text-xs text-slate-400">Total Savings</p>
+                <p className="text-xl font-semibold text-fuchsia-100">${roiData.monthly?.totalSavings ?? 0}</p>
+              </div>
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+                <p className="text-xs text-slate-400">ESG Carbon Badge</p>
+                <p className="text-xl font-semibold text-emerald-100">{roiData.esg?.badge ?? "N/A"}</p>
+                <p className="text-xs text-slate-500">{roiData.esg?.carbonFootprintKgCo2e ?? 0} kg CO2e</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
 }
-

@@ -3,6 +3,15 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { aiMemory, aiMessage } from "@/db/schema";
 import { env } from "@/lib/env";
+import { scrubSensitiveText, scrubTextBatch, unmaskSensitiveText } from "@/lib/server/data-scrubbing";
+import { inspectForGovernance } from "@/lib/server/governance";
+import {
+  buildCacheKey,
+  chooseModelRoute,
+  readCachedReply,
+  trackUsage,
+  writeCachedReply,
+} from "@/lib/server/usage-infra";
 
 function extractFacts(input: string) {
   const lower = input.toLowerCase();
@@ -161,6 +170,65 @@ export async function generateAssistantReply(params: {
     .reverse()
     .map((row) => ({ role: row.role as "user" | "assistant", content: row.content }));
 
+  const scrubbedHistoryBatch = scrubTextBatch(history.map((item) => item.content));
+  const scrubbedHistory = history.map((item, index) => ({
+    role: item.role,
+    content: scrubbedHistoryBatch.scrubbed[index] ?? item.content,
+  }));
+  const scrubbedMemory = scrubSensitiveText(memorySummary);
+  const scrubbedUserMessage = scrubSensitiveText(userMessage);
+  const scrubTokens = {
+    ...scrubbedHistoryBatch.tokens,
+    ...scrubbedMemory.tokens,
+    ...scrubbedUserMessage.tokens,
+  };
+  const route = chooseModelRoute({
+    requested: assistant,
+    prompt: userMessage,
+  });
+  const selectedAssistant = assistant === "auto" ? route.provider : assistant;
+  const cacheKey = buildCacheKey({
+    assistant: selectedAssistant,
+    prompt: scrubbedUserMessage.scrubbed,
+    memory: scrubbedMemory.scrubbed,
+    imageDigest: imageDataUrl ? String(imageDataUrl.length) : "",
+  });
+  const cached = readCachedReply(cacheKey);
+
+  inspectForGovernance({
+    userId,
+    direction: "input",
+    text: userMessage,
+    model: selectedAssistant,
+    routeContext: "ai_gateway_pre_prompt",
+  });
+
+  if (cached) {
+    trackUsage({
+      userId,
+      prompt: userMessage,
+      reply: cached.reply,
+    });
+    const outputAudit = inspectForGovernance({
+      userId,
+      direction: "output",
+      text: cached.reply,
+      model: cached.model,
+      routeContext: "ai_gateway_cached_response",
+    });
+    return {
+      reply: cached.reply,
+      memorySummary,
+      metadata: {
+        modelUsed: cached.model,
+        routing: route.strategy,
+        cached: true,
+        auditId: outputAudit.id,
+        aiBom: outputAudit.aiBom,
+      },
+    };
+  }
+
   const systemInstruction =
     "You are a warm AI assistant in a personal chat app. Be concise, helpful, and remember user context.";
   const parsedImage = parseImageDataUrl(imageDataUrl);
@@ -176,12 +244,9 @@ export async function generateAssistantReply(params: {
     }
 
     const availableModels = await listGeminiGenerateModels(apiKey);
-    const preferred = [
-      "models/gemini-2.5-flash",
-      "models/gemini-2.0-flash",
-      "models/gemini-1.5-flash-latest",
-      "models/gemini-1.5-flash",
-    ];
+    const preferred = route.complexity === "high"
+      ? ["models/gemini-1.5-pro-latest", "models/gemini-2.5-flash", "models/gemini-2.0-flash"]
+      : ["models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-1.5-flash-latest", "models/gemini-1.5-flash"];
     const fallback = ["models/gemini-2.0-flash", "models/gemini-1.5-flash-latest"];
     const models = (availableModels.length > 0
       ? [...preferred.filter((name) => availableModels.includes(name)), ...availableModels]
@@ -205,16 +270,16 @@ export async function generateAssistantReply(params: {
                   parts: [{ text: systemInstruction }],
                 },
                 ...(memorySummary
-                  ? [{ role: "user", parts: [{ text: `User memory:\n${memorySummary}` }] }]
+                  ? [{ role: "user", parts: [{ text: `User memory:\n${scrubbedMemory.scrubbed}` }] }]
                   : []),
-                ...history.map((item) => ({
+                ...scrubbedHistory.map((item) => ({
                   role: item.role === "assistant" ? "model" : "user",
                   parts: [{ text: item.content }],
                 })),
                 {
                   role: "user",
                   parts: [
-                    { text: userMessage },
+                    { text: scrubbedUserMessage.scrubbed },
                     ...(parsedImage
                       ? [
                           {
@@ -246,7 +311,7 @@ export async function generateAssistantReply(params: {
           continue;
         }
 
-        return { ok: true as const, reply };
+        return { ok: true as const, reply: unmaskSensitiveText(reply, scrubTokens), model };
       } catch (error) {
         lastError = error instanceof Error ? error.message : "Request exception";
       }
@@ -273,15 +338,15 @@ export async function generateAssistantReply(params: {
 
     const input = [
       { role: "system", content: systemInstruction },
-      ...(memorySummary ? [{ role: "system", content: `User memory:\n${memorySummary}` }] : []),
-      ...history.map((item) => ({
+      ...(memorySummary ? [{ role: "system", content: `User memory:\n${scrubbedMemory.scrubbed}` }] : []),
+      ...scrubbedHistory.map((item) => ({
         role: item.role,
         content: item.content,
       })),
       {
         role: "user",
         content: [
-          { type: "input_text", text: userMessage },
+          { type: "input_text", text: scrubbedUserMessage.scrubbed },
           ...(parsedImage ? [{ type: "input_image", image_url: imageDataUrl }] : []),
         ],
       },
@@ -317,7 +382,7 @@ export async function generateAssistantReply(params: {
 
         const textFromOutput = payload.output_text?.trim();
         if (textFromOutput) {
-          return { ok: true as const, reply: textFromOutput };
+          return { ok: true as const, reply: unmaskSensitiveText(textFromOutput, scrubTokens), model };
         }
 
         const nestedText =
@@ -327,7 +392,7 @@ export async function generateAssistantReply(params: {
             ?.trim() ?? "";
 
         if (nestedText) {
-          return { ok: true as const, reply: nestedText };
+          return { ok: true as const, reply: unmaskSensitiveText(nestedText, scrubTokens), model };
         }
 
         lastError = `Model ${model} returned empty output`;
@@ -342,14 +407,56 @@ export async function generateAssistantReply(params: {
     };
   }
 
-  if (assistant === "gemini") {
+  if (selectedAssistant === "gemini") {
     const result = await tryGeminiReply();
-    return { reply: result.ok ? result.reply : result.error, memorySummary };
+    const finalReply = result.ok ? result.reply : result.error;
+    const modelUsed = result.ok ? result.model : "gemini_fallback";
+    writeCachedReply(cacheKey, finalReply, modelUsed);
+    trackUsage({ userId, prompt: userMessage, reply: finalReply });
+    const outputAudit = inspectForGovernance({
+      userId,
+      direction: "output",
+      text: finalReply,
+      model: modelUsed,
+      routeContext: "ai_gateway_post_prompt",
+    });
+    return {
+      reply: finalReply,
+      memorySummary,
+      metadata: {
+        modelUsed,
+        routing: route.strategy,
+        cached: false,
+        auditId: outputAudit.id,
+        aiBom: outputAudit.aiBom,
+      },
+    };
   }
 
-  if (assistant === "chatgpt") {
+  if (selectedAssistant === "chatgpt") {
     const result = await tryOpenAiReply();
-    return { reply: result.ok ? result.reply : result.error, memorySummary };
+    const finalReply = result.ok ? result.reply : result.error;
+    const modelUsed = result.ok ? result.model : "chatgpt_fallback";
+    writeCachedReply(cacheKey, finalReply, modelUsed);
+    trackUsage({ userId, prompt: userMessage, reply: finalReply });
+    const outputAudit = inspectForGovernance({
+      userId,
+      direction: "output",
+      text: finalReply,
+      model: modelUsed,
+      routeContext: "ai_gateway_post_prompt",
+    });
+    return {
+      reply: finalReply,
+      memorySummary,
+      metadata: {
+        modelUsed,
+        routing: route.strategy,
+        cached: false,
+        auditId: outputAudit.id,
+        aiBom: outputAudit.aiBom,
+      },
+    };
   }
 
   const openAiResult = await tryOpenAiReply();
@@ -362,11 +469,28 @@ export async function generateAssistantReply(params: {
     return { reply: geminiResult.reply, memorySummary };
   }
 
+  const finalReply = `I couldn't reach the AI provider right now. OpenAI: ${openAiResult.error} | Gemini: ${geminiResult.error}`.slice(
+    0,
+    500,
+  );
+  writeCachedReply(cacheKey, finalReply, "provider_unavailable");
+  trackUsage({ userId, prompt: userMessage, reply: finalReply });
+  const outputAudit = inspectForGovernance({
+    userId,
+    direction: "output",
+    text: finalReply,
+    model: "provider_unavailable",
+    routeContext: "ai_gateway_post_prompt",
+  });
   return {
-    reply: `I couldn't reach the AI provider right now. OpenAI: ${openAiResult.error} | Gemini: ${geminiResult.error}`.slice(
-      0,
-      500,
-    ),
+    reply: finalReply,
     memorySummary,
+    metadata: {
+      modelUsed: "provider_unavailable",
+      routing: route.strategy,
+      cached: false,
+      auditId: outputAudit.id,
+      aiBom: outputAudit.aiBom,
+    },
   };
 }
