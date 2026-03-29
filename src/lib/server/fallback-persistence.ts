@@ -41,11 +41,77 @@ type FallbackModelLabProfile = {
   updatedAt: string;
 };
 
+type FallbackRetentionInsight = {
+  id: string;
+  userId: string;
+  churnRiskScore: number;
+  weeklyHoursSaved: number;
+  weeklyTasksCompleted: number;
+  progressiveProfile: Record<string, string>;
+  lastInterventionEmail: string | null;
+  updatedAt: string;
+};
+
+type FallbackBillingProfile = {
+  id: string;
+  userId: string;
+  plan: "basic" | "scale";
+  monthlyFeeCents: number;
+  proCallsIncluded: number;
+  proCallsUsed: number;
+  creditsRemaining: number;
+  standardUnlimited: boolean;
+  successFeeBps: number;
+  updatedAt: string;
+};
+
+type FallbackBillingTransaction = {
+  id: string;
+  userId: string;
+  type: string;
+  credits: number;
+  amountCents: number;
+  note: string | null;
+  createdAt: string;
+};
+
+type FallbackXaiLog = {
+  id: string;
+  userId: string;
+  taskId: string;
+  question: string;
+  answer: string;
+  reasoning: string;
+  sources: string[];
+  complianceFlags: string[];
+  modelVersion: string;
+  createdAt: string;
+};
+
+type FallbackPromptTemplate = {
+  id: string;
+  userId: string;
+  title: string;
+  category: string;
+  prompt: string;
+  uses: number;
+  rewardCredits: number;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const libraryAssetsByUser = new Map<string, FallbackLibraryAsset[]>();
 const libraryCollectionsByUser = new Map<string, Set<string>>();
 const apiKeysByUser = new Map<string, FallbackApiKey[]>();
 const webhookLogsByUser = new Map<string, FallbackWebhookLog[]>();
 const modelLabProfilesByUser = new Map<string, FallbackModelLabProfile>();
+const retentionInsightsByUser = new Map<string, FallbackRetentionInsight>();
+const billingProfilesByUser = new Map<string, FallbackBillingProfile>();
+const billingTransactionsByUser = new Map<string, FallbackBillingTransaction[]>();
+const xaiLogsByUser = new Map<string, FallbackXaiLog[]>();
+const promptTemplates = new Map<string, FallbackPromptTemplate>();
+const promptVotes = new Set<string>();
 
 export function getFallbackLibrary(userId: string) {
   const assets = libraryAssetsByUser.get(userId) ?? [];
@@ -178,4 +244,110 @@ export function saveFallbackModelLabProfile(userId: string, profile: Omit<Fallba
   };
   modelLabProfilesByUser.set(userId, next);
   return next;
+}
+
+export function getFallbackRetentionInsight(userId: string) {
+  const existing = retentionInsightsByUser.get(userId);
+  if (existing) return existing;
+  const created: FallbackRetentionInsight = {
+    id: crypto.randomUUID(),
+    userId,
+    churnRiskScore: 18,
+    weeklyHoursSaved: 6,
+    weeklyTasksCompleted: 14,
+    progressiveProfile: {},
+    lastInterventionEmail: null,
+    updatedAt: new Date().toISOString(),
+  };
+  retentionInsightsByUser.set(userId, created);
+  return created;
+}
+
+export function saveFallbackRetentionInsight(
+  userId: string,
+  updates: Partial<Omit<FallbackRetentionInsight, "id" | "userId" | "updatedAt">>,
+) {
+  const current = getFallbackRetentionInsight(userId);
+  const next: FallbackRetentionInsight = {
+    ...current,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+  retentionInsightsByUser.set(userId, next);
+  return next;
+}
+
+export function getFallbackBillingProfile(userId: string) {
+  const existing = billingProfilesByUser.get(userId);
+  if (existing) return existing;
+  const created: FallbackBillingProfile = {
+    id: crypto.randomUUID(),
+    userId,
+    plan: "basic",
+    monthlyFeeCents: 2000,
+    proCallsIncluded: 100,
+    proCallsUsed: 0,
+    creditsRemaining: 100,
+    standardUnlimited: false,
+    successFeeBps: 200,
+    updatedAt: new Date().toISOString(),
+  };
+  billingProfilesByUser.set(userId, created);
+  return created;
+}
+
+export function saveFallbackBillingProfile(
+  userId: string,
+  updates: Partial<Omit<FallbackBillingProfile, "id" | "userId" | "updatedAt">>,
+) {
+  const current = getFallbackBillingProfile(userId);
+  const next: FallbackBillingProfile = {
+    ...current,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+  billingProfilesByUser.set(userId, next);
+  return next;
+}
+
+export function addFallbackBillingTransaction(tx: FallbackBillingTransaction) {
+  const list = billingTransactionsByUser.get(tx.userId) ?? [];
+  list.unshift(tx);
+  billingTransactionsByUser.set(tx.userId, list.slice(0, 50));
+  return tx;
+}
+
+export function getFallbackBillingTransactions(userId: string) {
+  return billingTransactionsByUser.get(userId) ?? [];
+}
+
+export function addFallbackXaiLog(log: FallbackXaiLog) {
+  const list = xaiLogsByUser.get(log.userId) ?? [];
+  list.unshift(log);
+  xaiLogsByUser.set(log.userId, list.slice(0, 50));
+  return log;
+}
+
+export function getFallbackXaiLogs(userId: string) {
+  return xaiLogsByUser.get(userId) ?? [];
+}
+
+export function addFallbackPromptTemplate(template: FallbackPromptTemplate) {
+  promptTemplates.set(template.id, template);
+  return template;
+}
+
+export function listFallbackPromptTemplates() {
+  return Array.from(promptTemplates.values()).sort((a, b) => b.uses - a.uses);
+}
+
+export function voteFallbackPromptTemplate(userId: string, templateId: string) {
+  const key = `${userId}:${templateId}`;
+  if (promptVotes.has(key)) return null;
+  promptVotes.add(key);
+  const template = promptTemplates.get(templateId);
+  if (!template) return null;
+  const updated = { ...template, uses: template.uses + 1, rewardCredits: template.rewardCredits + 1, updatedAt: new Date().toISOString() };
+  promptTemplates.set(templateId, updated);
+  return updated;
 }

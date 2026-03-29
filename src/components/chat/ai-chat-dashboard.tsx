@@ -143,6 +143,7 @@ export function AiChatDashboard({ user }: { user: User }) {
     { href: "/dashboard/security", title: "Security", description: "PII and injection alerts" },
     { href: "/dashboard/style", title: "Style Tuner", description: "Brand voice scoring" },
     { href: "/dashboard/compliance", title: "Compliance", description: "Audit and ESG report" },
+    { href: "/dashboard/growth", title: "Growth & Trust", description: "Retention, pricing, governance" },
   ];
 
   function scrollToBottom() {
@@ -422,6 +423,29 @@ export function AiChatDashboard({ user }: { user: User }) {
     await sendMessageText(messageText, imageToSend);
   }
 
+  async function explainAssistantMessage(message: Message) {
+    if (message.role !== "assistant") return;
+    const sourceLinks = activeConversation ? [`Conversation:${activeConversation.id}`] : ["Conversation:unknown"];
+    const response = await fetch("/api/trust/xai", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        taskId: message.id,
+        question: "Why did I say this?",
+        answer: message.content,
+        reasoning: "Response was generated from recent chat history, memory summary, and active model routing strategy.",
+        sources: sourceLinks,
+        complianceFlags: [],
+        modelVersion: selectedAssistant === "auto" ? "auto-routed" : selectedAssistant,
+      }),
+    });
+    if (response.ok) {
+      toast.success("Explainable log saved. Check Growth & Trust page.");
+      return;
+    }
+    toast.error("Unable to generate explanation log.");
+  }
+
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.2),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#111827_100%)] p-4 text-slate-100 md:p-8">
       <div className="mx-auto grid w-full max-w-[1500px] gap-6 lg:grid-cols-[320px_1fr] xl:gap-8">
@@ -645,6 +669,16 @@ export function AiChatDashboard({ user }: { user: User }) {
                 <a href="/dashboard/compliance">
                   <Cpu className="mr-2 size-4" />
                   Compliance & ESG
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                <a href="/dashboard/growth">
+                  <Sparkles className="mr-2 size-4" />
+                  Growth & Trust
                 </a>
               </Button>
               <Button
@@ -944,6 +978,15 @@ export function AiChatDashboard({ user }: { user: User }) {
                           }`}
                         >
                           <p className="whitespace-pre-wrap">{message.content}</p>
+                          {message.role === "assistant" ? (
+                            <button
+                              type="button"
+                              className="mt-2 text-[11px] text-indigo-200 underline decoration-dotted underline-offset-2"
+                              onClick={() => void explainAssistantMessage(message)}
+                            >
+                              Why did I say this?
+                            </button>
+                          ) : null}
                         </div>
                       ))}
                       <div ref={messagesEndRef} />

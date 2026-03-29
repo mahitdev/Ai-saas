@@ -342,3 +342,124 @@ export const modelLabProfile = pgTable(
   },
   (table) => [index("model_lab_profile_userId_idx").on(table.userId)],
 );
+
+export const retentionInsight = pgTable(
+  "retention_insight",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    churnRiskScore: integer("churn_risk_score").notNull().default(0),
+    weeklyHoursSaved: integer("weekly_hours_saved").notNull().default(0),
+    weeklyTasksCompleted: integer("weekly_tasks_completed").notNull().default(0),
+    progressiveProfile: text("progressive_profile").notNull().default("{}"),
+    lastInterventionEmail: text("last_intervention_email"),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("retention_insight_userId_idx").on(table.userId)],
+);
+
+export const billingProfile = pgTable(
+  "billing_profile",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    plan: text("plan").notNull().default("basic"),
+    monthlyFeeCents: integer("monthly_fee_cents").notNull().default(2000),
+    proCallsIncluded: integer("pro_calls_included").notNull().default(100),
+    proCallsUsed: integer("pro_calls_used").notNull().default(0),
+    creditsRemaining: integer("credits_remaining").notNull().default(100),
+    standardUnlimited: boolean("standard_unlimited").notNull().default(false),
+    successFeeBps: integer("success_fee_bps").notNull().default(200),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("billing_profile_userId_idx").on(table.userId)],
+);
+
+export const billingTransaction = pgTable(
+  "billing_transaction",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    credits: integer("credits").notNull().default(0),
+    amountCents: integer("amount_cents").notNull().default(0),
+    note: text("note"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("billing_transaction_userId_idx").on(table.userId)],
+);
+
+export const xaiLog = pgTable(
+  "xai_log",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    taskId: text("task_id").notNull(),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    reasoning: text("reasoning").notNull(),
+    sources: text("sources").notNull().default("[]"),
+    complianceFlags: text("compliance_flags").notNull().default("[]"),
+    modelVersion: text("model_version").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("xai_log_userId_idx").on(table.userId)],
+);
+
+export const promptTemplate = pgTable(
+  "prompt_template",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    category: text("category").notNull().default("general"),
+    prompt: text("prompt").notNull(),
+    uses: integer("uses").notNull().default(0),
+    rewardCredits: integer("reward_credits").notNull().default(0),
+    isPublic: boolean("is_public").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("prompt_template_userId_idx").on(table.userId)],
+);
+
+export const promptTemplateVote = pgTable(
+  "prompt_template_vote",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    templateId: text("template_id")
+      .notNull()
+      .references(() => promptTemplate.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("prompt_template_vote_userId_idx").on(table.userId),
+    index("prompt_template_vote_templateId_idx").on(table.templateId),
+  ],
+);
