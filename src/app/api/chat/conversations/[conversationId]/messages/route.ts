@@ -29,7 +29,7 @@ export async function GET(_: Request, context: RouteContext) {
     const messages = await db
       .select()
       .from(aiMessage)
-      .where(and(eq(aiMessage.conversationId, conversationId), eq(aiMessage.userId, user.id)))
+      .where(eq(aiMessage.conversationId, conversationId))
       .orderBy(asc(aiMessage.createdAt));
 
     return NextResponse.json({ messages });
@@ -66,7 +66,6 @@ export async function POST(request: Request, context: RouteContext) {
       .insert(aiMessage)
       .values({
         conversationId,
-        userId: user.id,
         content,
         role,
       })
