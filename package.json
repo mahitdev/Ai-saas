@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "agent": "tsx scripts/agent.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -63,11 +64,14 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@ai-sdk/google": "^3.0.53",
+    "@clack/prompts": "^1.1.0",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "ai": "^6.0.141",
     "drizzle-kit": "^0.31.8",
     "eslint": "^9",
     "eslint-config-next": "^15.5.14",
