@@ -116,11 +116,11 @@ async function askModel(model: "auto" | "chatgpt" | "gemini", prompt: string, im
   if (model === "chatgpt") return askOpenAi(prompt, imageDataUrl);
   if (model === "gemini") return askGemini(prompt, imageDataUrl);
 
-  const openAi = await askOpenAi(prompt, imageDataUrl);
-  if (!openAi.toLowerCase().includes("could not produce") && !openAi.toLowerCase().includes("missing")) {
-    return openAi;
+  const gemini = await askGemini(prompt, imageDataUrl);
+  if (!gemini.toLowerCase().includes("could not produce") && !gemini.toLowerCase().includes("missing")) {
+    return gemini;
   }
-  return askGemini(prompt, imageDataUrl);
+  return askOpenAi(prompt, imageDataUrl);
 }
 
 export async function POST(request: Request) {

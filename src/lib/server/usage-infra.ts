@@ -65,7 +65,7 @@ export function chooseModelRoute(params: {
   }
 
   return {
-    provider: "chatgpt",
+    provider: "gemini",
     strategy: "simple_to_fast_model",
     complexity: "low",
   } as const;
