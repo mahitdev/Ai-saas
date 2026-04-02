@@ -27,7 +27,6 @@ export async function GET() {
       .limit(30);
     history.push({ conversationId: conversation.id, messages });
   }
-
   return NextResponse.json({
     offlineReady: true,
     cachedAt: new Date().toISOString(),
