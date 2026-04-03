@@ -33,7 +33,7 @@ import { authClient } from "@/lib/auth.client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -126,26 +126,6 @@ export function AiChatDashboard({ user }: { user: User }) {
     () => conversations.find((conversation) => conversation.id === activeConversationId) ?? null,
     [conversations, activeConversationId],
   );
-  const workspacePages = [
-    { href: "/dashboard/chat", title: "AI Chat", description: "Dedicated chat workspace" },
-    { href: "/dashboard/comparison", title: "Comparison", description: "Compare model outputs" },
-    { href: "/dashboard/mind-map", title: "Mind Map", description: "Explore topic graph" },
-    { href: "/dashboard/logic-builder", title: "Logic Builder", description: "Build AI workflows" },
-    { href: "/dashboard/ubiquity", title: "Ubiquity", description: "Extensions and plugins" },
-    { href: "/dashboard/voice", title: "Voice Actions", description: "Phone and widget commands" },
-    { href: "/dashboard/semantic", title: "Semantic Layer", description: "Business formula mapping" },
-    { href: "/dashboard/reports", title: "Weekly Digest", description: "Offline reports and delivery" },
-    { href: "/dashboard/library", title: "Library", description: "Assets, versions, tagging" },
-    { href: "/dashboard/analytics", title: "Analytics", description: "Efficiency and trends" },
-    { href: "/dashboard/developer", title: "API & Developer", description: "Keys and sandbox" },
-    { href: "/dashboard/model-lab", title: "Model Lab", description: "Prompt and RAG tuning" },
-    { href: "/dashboard/orchestrator", title: "Orchestrator", description: "Agent squad workflows" },
-    { href: "/dashboard/security", title: "Security", description: "PII and injection alerts" },
-    { href: "/dashboard/style", title: "Style Tuner", description: "Brand voice scoring" },
-    { href: "/dashboard/compliance", title: "Compliance", description: "Audit and ESG report" },
-    { href: "/dashboard/growth", title: "Growth & Trust", description: "Retention, pricing, governance" },
-  ];
-
   function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }
@@ -448,7 +428,7 @@ export function AiChatDashboard({ user }: { user: User }) {
 
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.2),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#111827_100%)] p-4 text-slate-100 md:p-8">
-      <div className="mx-auto grid w-full max-w-[1500px] gap-6 lg:grid-cols-[320px_1fr] xl:gap-8">
+      <div className="mx-auto grid w-full max-w-[1700px] gap-6 lg:grid-cols-[320px_minmax(0,1fr)] xl:gap-8">
         <Card className="h-fit border-slate-700/70 bg-slate-950/80 text-slate-100 backdrop-blur">
           <CardHeader className="space-y-3">
             <div className="flex items-center gap-3">
@@ -832,35 +812,10 @@ export function AiChatDashboard({ user }: { user: User }) {
               </Button>
             </div>
 
-            <Button
-              variant="outline"
-              className="w-full border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              onClick={() =>
-                authClient.signOut({
-                  fetchOptions: {
-                    onSuccess: () => window.location.assign("/"),
-                  },
-                })
-              }
-            >
-              Sign out
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-700/70 bg-slate-950/80 text-slate-100">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-cyan-200 [text-shadow:0_0_16px_rgba(34,211,238,0.55)]">
-                  <Bot className="size-5 text-cyan-300 drop-shadow-[0_0_10px_rgba(34,211,238,0.7)]" />
-                  AI Chat With Memory
-                </CardTitle>
-                <CardDescription className="text-slate-400">
-                  Your assistant remembers your context and prior conversations.
-                </CardDescription>
-              </div>
-              <div className="flex gap-2">
+            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Chat Details</p>
+              <p className="text-xs text-slate-300">Active: {activeConversation?.title ?? "No chat selected"}</p>
+              <div className="grid gap-2 sm:grid-cols-2">
                 <select
                   value={adaptiveRole}
                   onChange={(event) => setAdaptiveRole(event.target.value as "developer" | "manager")}
@@ -879,333 +834,218 @@ export function AiChatDashboard({ user }: { user: User }) {
                   {listening ? <MicOff className="mr-2 size-4" /> : <Mic className="mr-2 size-4" />}
                   {listening ? "Stop" : directVoiceMode ? "Talk & Send" : "Talk"}
                 </Button>
-                <Button
-                  type="button"
-                  variant={directVoiceMode ? "default" : "outline"}
-                  size="sm"
-                  className={directVoiceMode ? "bg-fuchsia-500/20 text-fuchsia-100 shadow-[0_0_14px_rgba(217,70,239,0.35)]" : "border-slate-700 bg-slate-900 text-slate-200"}
-                  onClick={() => setDirectVoiceMode((current) => !current)}
-                >
-                  Direct Voice
-                </Button>
-                <Button
-                  type="button"
-                  variant={cameraEnabled ? "default" : "outline"}
-                  size="sm"
-                  className={cameraEnabled ? "bg-emerald-500/20 text-emerald-100 shadow-[0_0_14px_rgba(16,185,129,0.35)]" : "border-slate-700 bg-slate-900 text-slate-200"}
-                  onClick={() => {
-                    if (cameraEnabled) {
-                      stopCamera();
-                      return;
-                    }
-                    void startCamera();
-                  }}
-                >
-                  {cameraEnabled ? <CameraOff className="mr-2 size-4" /> : <Camera className="mr-2 size-4" />}
-                  {cameraEnabled ? "Camera Off" : "Camera On"}
-                </Button>
-                <Button
-                  type="button"
-                  variant={voiceOutputEnabled ? "default" : "outline"}
-                  size="sm"
-                  className={voiceOutputEnabled ? "bg-indigo-500/20 text-indigo-100 shadow-[0_0_14px_rgba(129,140,248,0.35)]" : "border-slate-700 bg-slate-900 text-slate-200"}
-                  onClick={() => setVoiceOutputEnabled((current) => !current)}
-                >
-                  {voiceOutputEnabled ? <Volume2 className="mr-2 size-4" /> : <VolumeX className="mr-2 size-4" />}
-                  Voice
-                </Button>
               </div>
-            </div>
-            <Badge variant="outline" className="w-fit border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
-              Memory: {memory ? `${memory.split("\n").length} notes` : "empty"}
-            </Badge>
-            <Badge variant="outline" className="w-fit border-indigo-400/40 bg-indigo-500/10 text-indigo-200">
-              Role: {adaptiveRole}
-            </Badge>
-            <Badge variant="outline" className="w-fit border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-200">
-              Intent: {detectedIntent.replace("_", " ")}
-            </Badge>
-            <p className="text-xs text-slate-400">
-              {directVoiceMode
-                ? "Direct voice is ON: speak and your message is sent automatically."
-                : "Direct voice is OFF: speech is inserted into the input box first."}
-            </p>
-            <p className="text-xs text-slate-400">
-              {conversationMode
-                ? "One-to-one mode is ON: AI listens again after each response for real-time conversation."
-                : "One-to-one mode is OFF: tap Talk each time you want to speak."}
-            </p>
-            {cameraError ? <p className="text-xs text-rose-300">Camera: {cameraError}</p> : null}
-            <div className="mt-2 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Workspace Pages</p>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                {workspacePages.map((page) => (
-                  <a
-                    key={page.href}
-                    href={page.href}
-                    className="rounded-md border border-slate-700 bg-slate-900/70 px-2 py-2 text-xs text-slate-200 transition hover:border-cyan-400/50 hover:text-cyan-100"
+              <Button
+                type="button"
+                variant={cameraEnabled ? "default" : "outline"}
+                size="sm"
+                className={cameraEnabled ? "w-full bg-emerald-500/20 text-emerald-100 shadow-[0_0_14px_rgba(16,185,129,0.35)]" : "w-full border-slate-700 bg-slate-900 text-slate-200"}
+                onClick={() => {
+                  if (cameraEnabled) {
+                    stopCamera();
+                    return;
+                  }
+                  void startCamera();
+                }}
+              >
+                {cameraEnabled ? <CameraOff className="mr-2 size-4" /> : <Camera className="mr-2 size-4" />}
+                {cameraEnabled ? "Camera Off" : "Camera On"}
+              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
+                  Messages: {messages.length}
+                </Badge>
+                <Badge variant="outline" className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
+                  Memory: {memory ? `${memory.split("\n").length} notes` : "empty"}
+                </Badge>
+                <Badge variant="outline" className="border-indigo-400/40 bg-indigo-500/10 text-indigo-200">
+                  Role: {adaptiveRole}
+                </Badge>
+                <Badge variant="outline" className="border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-200">
+                  Intent: {detectedIntent.replace("_", " ")}
+                </Badge>
+              </div>
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-2">
+                {memory ? (
+                  memory
+                    .split("\n")
+                    .slice(0, 4)
+                    .map((line, idx) => (
+                      <p key={`${line}-${idx}`} className="truncate text-[11px] text-slate-300">
+                        - {line}
+                      </p>
+                    ))
+                ) : (
+                  <p className="text-[11px] text-slate-500">No memory captured yet.</p>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                {directVoiceMode
+                  ? "Direct voice is ON: your speech sends automatically."
+                  : "Direct voice is OFF: speech is placed in input first."}
+              </p>
+              {cameraError ? <p className="text-xs text-rose-300">Camera: {cameraError}</p> : null}
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-300">Quick Starters</p>
+                {[
+                  "Help me plan my day in 5 steps",
+                  "Summarize what you remember about me",
+                  "Give me a focused study plan",
+                ].map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-left text-xs text-slate-200 hover:border-cyan-400/60 hover:text-cyan-100"
+                    onClick={() => setInput(prompt)}
                   >
-                    <p className="font-semibold">{page.title}</p>
-                    <p className="mt-1 text-slate-400">{page.description}</p>
-                  </a>
+                    {prompt}
+                  </button>
                 ))}
               </div>
             </div>
-          </CardHeader>
 
-          <CardContent className="mt-4 space-y-7">
-            <div className="space-y-4">
-              <div className="space-y-4">
-                <ScrollArea className="h-[560px] rounded-lg border border-slate-700 bg-[#050914] p-4">
-                  {loadingMessages ? (
-                    <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Loading messages...
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                      Start chatting. I will remember context.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`max-w-[92%] rounded-lg px-3 py-2 text-sm ${
-                            message.role === "user"
-                              ? "ml-auto border border-cyan-400/40 bg-slate-900 text-cyan-100 [text-shadow:0_0_10px_rgba(34,211,238,0.5)]"
-                              : "border border-indigo-400/35 bg-slate-950/80 text-indigo-100 [text-shadow:0_0_10px_rgba(129,140,248,0.5)]"
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap">{message.content}</p>
-                          {message.role === "assistant" ? (
-                            <button
-                              type="button"
-                              className="mt-2 text-[11px] text-indigo-200 underline decoration-dotted underline-offset-2"
-                              onClick={() => void explainAssistantMessage(message)}
-                            >
-                              Why did I say this?
-                            </button>
-                          ) : null}
-                        </div>
-                      ))}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  )}
-                </ScrollArea>
+            <Button
+              variant="outline"
+              className="w-full border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              onClick={() =>
+                authClient.signOut({
+                  fetchOptions: {
+                    onSuccess: () => window.location.assign("/"),
+                  },
+                })
+              }
+            >
+              Sign out
+            </Button>
+          </CardContent>
+        </Card>
 
-                {cameraEnabled ? (
-                  <div className="rounded-lg border border-emerald-500/35 bg-slate-950/60 p-3">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Face-to-Face Camera</p>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={sendLiveFrame ? "default" : "outline"}
-                          className={sendLiveFrame ? "bg-emerald-500/20 text-emerald-100" : "border-slate-700 bg-slate-900 text-slate-200"}
-                          onClick={() => setSendLiveFrame((current) => !current)}
-                        >
-                          Live Frame
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="border-slate-700 bg-slate-900 text-slate-200"
-                          onClick={() => {
-                            const frame = captureFrame();
-                            if (frame) {
-                              setCapturedImage(frame);
-                              toast.success("Frame captured and attached.");
-                            }
-                          }}
-                        >
-                          <ImagePlus className="mr-1 size-4" />
-                          Capture
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        muted
-                        playsInline
-                        className="aspect-video w-full rounded-md border border-slate-700 bg-slate-900 object-cover"
-                      />
-                      {capturedImage ? (
-                        <div className="relative">
-                          <Image
-                            src={capturedImage}
-                            alt="Captured preview"
-                            width={640}
-                            height={360}
-                            unoptimized
-                            className="aspect-video w-full rounded-md border border-cyan-500/40 object-cover"
-                          />
-                          <button
-                            type="button"
-                            className="absolute right-2 top-2 rounded-full border border-slate-700 bg-slate-950/80 p-1 text-slate-200 hover:bg-slate-900"
-                            onClick={() => setCapturedImage(null)}
-                          >
-                            <X className="size-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex aspect-video items-center justify-center rounded-md border border-dashed border-slate-700 bg-slate-900/60 text-xs text-slate-400">
-                          No manual frame captured yet.
-                        </div>
-                      )}
-                    </div>
+        <Card className="border-slate-700/70 bg-slate-950/80 text-slate-100">
+          <CardContent className="flex min-h-[78svh] flex-col gap-4 p-4 md:p-6">
+            <div className="min-h-0 flex-1">
+              <ScrollArea className="h-full rounded-lg border border-slate-700 bg-[#050914] p-4">
+                {loadingMessages ? (
+                  <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Loading messages...
                   </div>
-                ) : null}
-
-                <div className="flex gap-2">
-                  <Input
-                    value={input}
-                    onChange={(event) => setInput(event.target.value)}
-                    placeholder="Ask anything..."
-                    className="border-slate-700 bg-slate-950 text-slate-100 placeholder:text-slate-500"
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && !event.shiftKey) {
-                        event.preventDefault();
-                        void sendMessage();
-                      }
-                    }}
-                  />
-                  <Button className="bg-cyan-500/15 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.25)] hover:bg-cyan-500/25" onClick={() => void sendMessage()} disabled={sending || !input.trim()}>
-                    {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                  <p className="text-xs font-semibold tracking-wide text-cyan-300 uppercase">Section 1: Chat Info</p>
-                  <p className="mt-2 text-sm text-slate-300">Active chat</p>
-                  <p className="truncate text-sm font-medium text-cyan-100">{activeConversation?.title ?? "No chat selected"}</p>
-                  <p className="mt-2 text-xs text-slate-400">Messages: {messages.length}</p>
-                </div>
-
-                {adaptiveRole === "developer" ? (
-                  <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                    <p className="text-xs font-semibold tracking-wide text-emerald-300 uppercase">Developer View</p>
-                    <p className="mt-2 text-xs text-slate-300">API status: healthy</p>
-                    <pre className="mt-2 overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-2 text-[11px] text-emerald-100">
-{`[log] chat.send ok\n[log] scrubber active\n[log] model=${selectedAssistant}`}
-                    </pre>
+                ) : messages.length === 0 ? (
+                  <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                    Start chatting. I will remember context.
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                    <p className="text-xs font-semibold tracking-wide text-amber-300 uppercase">Manager View</p>
-                    <p className="mt-2 text-xs text-slate-300">ROI snapshot and outcomes</p>
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
-                        <p className="text-slate-400">Hours Saved</p>
-                        <p className="font-semibold text-amber-100">{Math.max(1, Math.round(messages.length / 4))}h</p>
+                  <div className="space-y-3">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`max-w-[92%] rounded-lg px-3 py-2 text-sm ${
+                          message.role === "user"
+                            ? "ml-auto border border-cyan-400/40 bg-slate-900 text-cyan-100 [text-shadow:0_0_10px_rgba(34,211,238,0.5)]"
+                            : "border border-indigo-400/35 bg-slate-950/80 text-indigo-100 [text-shadow:0_0_10px_rgba(129,140,248,0.5)]"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                        {message.role === "assistant" ? (
+                          <button
+                            type="button"
+                            className="mt-2 text-[11px] text-indigo-200 underline decoration-dotted underline-offset-2"
+                            onClick={() => void explainAssistantMessage(message)}
+                          >
+                            Why did I say this?
+                          </button>
+                        ) : null}
                       </div>
-                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
-                        <p className="text-slate-400">ROI</p>
-                        <p className="font-semibold text-amber-100">${Math.max(25, messages.length * 3)}</p>
-                      </div>
-                    </div>
+                    ))}
+                    <div ref={messagesEndRef} />
                   </div>
                 )}
-
-                {detectedIntent === "budget_analysis" ? (
-                  <div className="rounded-lg border border-fuchsia-500/35 bg-slate-950/70 p-4 md:col-span-2 xl:col-span-2">
-                    <p className="text-xs font-semibold tracking-wide text-fuchsia-300 uppercase">Intent-Driven Budget Grid</p>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-200">
-                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">Revenue: $120,000</div>
-                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">COGS: $48,000</div>
-                      <div className="rounded-md border border-slate-700 bg-slate-900 p-2">Profit: $72,000</div>
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                  <p className="text-xs font-semibold tracking-wide text-indigo-300 uppercase">Section 2: Memory</p>
-                  <div className="mt-2 space-y-1">
-                    {memory ? memory.split("\n").slice(0, 5).map((line, idx) => (
-                      <p key={`${line}-${idx}`} className="text-xs text-slate-300">- {line}</p>
-                    )) : <p className="text-xs text-slate-500">No memory captured yet.</p>}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                  <p className="text-xs font-semibold tracking-wide text-fuchsia-300 uppercase">Section 3: Quick Starters</p>
-                  <div className="mt-2 space-y-2">
-                    {[
-                      "Help me plan my day in 5 steps",
-                      "Summarize what you remember about me",
-                      "Give me a focused study plan",
-                    ].map((prompt) => (
-                      <button
-                        key={prompt}
-                        type="button"
-                        className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-left text-xs text-slate-200 hover:border-cyan-400/60 hover:text-cyan-100"
-                        onClick={() => setInput(prompt)}
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              </ScrollArea>
             </div>
 
-            <div className="space-y-3 rounded-lg border border-slate-700 bg-slate-950/50 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold uppercase tracking-wide text-slate-200">Workspace Hub</p>
-                <p className="text-xs text-slate-500">Use the full space for faster actions</p>
-              </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <a href="/dashboard/comparison" className="min-h-44 rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-indigo-400/50">
-                  <div className="flex items-center gap-2">
-                    <Brain className="size-4 text-indigo-300" />
-                    <p className="text-sm font-semibold uppercase tracking-wide text-indigo-300">Model Comparison</p>
+            {cameraEnabled ? (
+              <div className="rounded-lg border border-emerald-500/35 bg-slate-950/60 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Face-to-Face Camera</p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={sendLiveFrame ? "default" : "outline"}
+                      className={sendLiveFrame ? "bg-emerald-500/20 text-emerald-100" : "border-slate-700 bg-slate-900 text-slate-200"}
+                      onClick={() => setSendLiveFrame((current) => !current)}
+                    >
+                      Live Frame
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-700 bg-slate-900 text-slate-200"
+                      onClick={() => {
+                        const frame = captureFrame();
+                        if (frame) {
+                          setCapturedImage(frame);
+                          toast.success("Frame captured and attached.");
+                        }
+                      }}
+                    >
+                      <ImagePlus className="mr-1 size-4" />
+                      Capture
+                    </Button>
                   </div>
-                  <p className="mt-2 text-sm text-slate-400">Run side-by-side prompts and lock in the best output instantly.</p>
-                  <div className="mt-4 grid grid-cols-3 gap-1">
-                    {[42, 66, 58].map((value, index) => (
-                      <div key={index} className="rounded bg-indigo-500/25" style={{ height: `${value}px` }} />
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs text-indigo-200">Open dedicated comparison lab</p>
-                </a>
+                </div>
 
-                <a href="/dashboard/mind-map" className="min-h-44 rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-fuchsia-400/50">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="size-4 text-fuchsia-300" />
-                    <p className="text-sm font-semibold uppercase tracking-wide text-fuchsia-300">Knowledge Mind Map</p>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-400">Visualize recurring topics and jump into connected message evidence.</p>
-                  <div className="mt-4 flex flex-wrap gap-1">
-                    {["memory", "budget", "api", "workflow", "security"].map((chip) => (
-                      <span key={chip} className="rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] text-fuchsia-200">
-                        {chip}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs text-fuchsia-200">Explore topic graph view</p>
-                </a>
-
-                <a href="/dashboard/logic-builder" className="min-h-44 rounded-lg border border-slate-700 bg-slate-950/70 p-5 transition hover:border-cyan-400/50">
-                  <div className="flex items-center gap-2">
-                    <Cpu className="size-4 text-cyan-300" />
-                    <p className="text-sm font-semibold uppercase tracking-wide text-cyan-300">Logic Builder</p>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-400">Chain search, summarize, and draft blocks into reusable workflows.</p>
-                  <div className="mt-4 space-y-1 text-xs text-cyan-100">
-                    <p>1. Web Search</p>
-                    <p>2. Summarize</p>
-                    <p>3. Draft Output</p>
-                  </div>
-                  <p className="mt-2 text-xs text-cyan-200">Open drag-and-drop builder</p>
-                </a>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="aspect-video w-full rounded-md border border-slate-700 bg-slate-900 object-cover"
+                  />
+                  {capturedImage ? (
+                    <div className="relative">
+                      <Image
+                        src={capturedImage}
+                        alt="Captured preview"
+                        width={640}
+                        height={360}
+                        unoptimized
+                        className="aspect-video w-full rounded-md border border-cyan-500/40 object-cover"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 rounded-full border border-slate-700 bg-slate-950/80 p-1 text-slate-200 hover:bg-slate-900"
+                        onClick={() => setCapturedImage(null)}
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex aspect-video items-center justify-center rounded-md border border-dashed border-slate-700 bg-slate-900/60 text-xs text-slate-400">
+                      No manual frame captured yet.
+                    </div>
+                  )}
+                </div>
               </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Input
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                placeholder="Ask anything..."
+                className="border-slate-700 bg-slate-950 text-slate-100 placeholder:text-slate-500"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void sendMessage();
+                  }
+                }}
+              />
+              <Button className="bg-cyan-500/15 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.25)] hover:bg-cyan-500/25" onClick={() => void sendMessage()} disabled={sending || !input.trim()}>
+                {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              </Button>
             </div>
           </CardContent>
         </Card>
