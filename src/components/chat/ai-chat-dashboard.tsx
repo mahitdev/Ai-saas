@@ -815,6 +815,22 @@ export function AiChatDashboard({ user }: { user: User }) {
             <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Chat Details</p>
               <p className="text-xs text-slate-300">Active: {activeConversation?.title ?? "No chat selected"}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full border-rose-700/60 bg-rose-950/30 text-rose-100 hover:bg-rose-900/40 disabled:opacity-50"
+                disabled={!activeConversationId}
+                onClick={() => {
+                  if (!activeConversationId) return;
+                  const confirmed = window.confirm("Delete this chat? This action cannot be undone.");
+                  if (!confirmed) return;
+                  void deleteConversation(activeConversationId);
+                }}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Delete Active Chat
+              </Button>
               <div className="grid gap-2 sm:grid-cols-2">
                 <select
                   value={adaptiveRole}
