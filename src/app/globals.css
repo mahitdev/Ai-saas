@@ -121,6 +121,17 @@
   }
   body {
     @apply bg-background text-foreground;
+    color-scheme: dark;
+    background:
+      radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 28%),
+      radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.12), transparent 24%),
+      #020617;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgba(34, 211, 238, 0.22);
+    color: white;
   }
 }
 
@@ -184,5 +195,13 @@
 
   .animate-marquee {
     animation: marqueeX 18s linear infinite;
+  }
+
+  .app-surface {
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(2, 6, 23, 0.7);
+    box-shadow: 0 20px 80px rgba(2, 6, 23, 0.35);
+    backdrop-filter: blur(24px);
   }
 }
