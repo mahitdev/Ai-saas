@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid export payload" }, { status: 400 });
   }
 
-  const watermark = "Powered by Ai agent - https://myai-phi.vercel.app?promo=SAVE20";
+  const watermark = "Powered by AI Agent - https://myai-phi.vercel.app?promo=SAVE20";
   return NextResponse.json({
     format: parsed.data.format,
     content: `${parsed.data.content}\n\n---\n${watermark}`,

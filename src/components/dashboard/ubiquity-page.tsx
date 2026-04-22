@@ -14,7 +14,7 @@ export function UbiquityPage() {
   const [mcpTarget, setMcpTarget] = useState("");
   const [mcpResult, setMcpResult] = useState<string>("");
   const [botPlatform, setBotPlatform] = useState<BotPlatform>("slack");
-  const [botMessage, setBotMessage] = useState("@Ai agent summarize this sprint thread");
+  const [botMessage, setBotMessage] = useState("@AI Agent summarize this sprint thread");
   const [botReply, setBotReply] = useState("");
   const [command, setCommand] = useState("");
   const [commandOutput, setCommandOutput] = useState("");
@@ -115,7 +115,7 @@ export function UbiquityPage() {
               <p>
                 Load via <code>chrome://extensions</code> {"->"} Developer Mode {"->"} Load unpacked.
               </p>
-              <p>Context-menu action: &quot;Send to Ai agent&quot;.</p>
+              <p>Context-menu action: &quot;Send to AI Agent&quot;.</p>
             </CardContent>
           </Card>
 

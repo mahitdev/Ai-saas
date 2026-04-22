@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { GrindLockLanding } from "@/components/landing/grindlock-landing";
+import { AiAgentLanding } from "@/components/landing/ai-agent-landing";
 import { getServerSession } from "@/lib/server/session";
 
 export const metadata: Metadata = {
-  title: "Ai agent",
+  title: "AI Agent",
   description: "Discipline your time. Own your future.",
 };
 
@@ -16,5 +16,5 @@ export default async function Home() {
     redirect("/dashboard/chat");
   }
 
-  return <GrindLockLanding />;
+  return <AiAgentLanding />;
 }
