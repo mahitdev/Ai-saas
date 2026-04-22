@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-type AgentType = "researcher" | "writer" | "compliance";
+type AgentType = "researcher" | "strategist" | "writer" | "compliance";
 
 const AGENT_LABELS: Record<AgentType, string> = {
   researcher: "Researcher",
+  strategist: "Strategist",
   writer: "Writer",
   compliance: "Compliance",
 };
@@ -22,7 +23,8 @@ export function OrchestratorPage() {
     { id: "a3", type: "compliance" },
   ]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [handoffs, setHandoffs] = useState<Array<{ agent: string; startedAt: string; finishedAt: string; output: string }>>([]);
+  const [handoffs, setHandoffs] = useState<Array<{ agent: string; startedAt: string; finishedAt: string; output: string; trace: string }>>([]);
+  const [traces, setTraces] = useState<Array<{ step: number; agent: string; summary: string }>>([]);
   const [result, setResult] = useState("");
   const [running, setRunning] = useState(false);
   const [hitlEnabled, setHitlEnabled] = useState(true);
@@ -32,6 +34,20 @@ export function OrchestratorPage() {
 
   function addAgent(type: AgentType) {
     setAgents((prev) => [...prev, { id: crypto.randomUUID(), type }]);
+  }
+
+  function applyWorkflowPreset() {
+    const goal = task.toLowerCase();
+    const nextAgents: AgentType[] = goal.includes("campaign") || goal.includes("marketing")
+      ? ["researcher", "strategist", "writer", "compliance"]
+      : goal.includes("code") || goal.includes("bug") || goal.includes("build")
+        ? ["researcher", "strategist", "writer", "compliance"]
+        : goal.includes("invoice") || goal.includes("finance") || goal.includes("budget")
+          ? ["researcher", "strategist", "compliance"]
+          : ["researcher", "strategist", "writer", "compliance"];
+
+    setAgents(nextAgents.map((type) => ({ id: crypto.randomUUID(), type })));
+    setCheckpoints(goal.includes("approve") || goal.includes("spend") || goal.includes("send") ? [2] : [1]);
   }
 
   function moveAgent(fromId: string, toId: string) {
@@ -52,6 +68,7 @@ export function OrchestratorPage() {
     if (!approve) {
       setResult("");
       setHandoffs([]);
+      setTraces([]);
       setPendingAgent(null);
     }
     try {
@@ -69,7 +86,8 @@ export function OrchestratorPage() {
       if (!response.ok) throw new Error("Failed to run orchestrator");
       const payload = (await response.json()) as {
         result: string;
-        handoffs: Array<{ agent: string; startedAt: string; finishedAt: string; output: string }>;
+        handoffs: Array<{ agent: string; startedAt: string; finishedAt: string; output: string; trace: string }>;
+        traces?: Array<{ step: number; agent: string; summary: string }>;
         paused?: boolean;
         reason?: string;
         executionId?: string;
@@ -79,6 +97,7 @@ export function OrchestratorPage() {
         setExecutionId(payload.executionId ?? null);
         setPendingAgent(payload.pendingAgent ?? "unknown");
         setHandoffs(payload.handoffs ?? []);
+        setTraces(payload.traces ?? []);
         setResult("Execution paused for human approval checkpoint.");
         return;
       }
@@ -86,6 +105,7 @@ export function OrchestratorPage() {
       setPendingAgent(null);
       setResult(payload.result);
       setHandoffs(payload.handoffs);
+      setTraces(payload.traces ?? []);
     } finally {
       setRunning(false);
     }
@@ -102,7 +122,7 @@ export function OrchestratorPage() {
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">Workflow Setup</CardTitle>
-            <CardDescription className="text-slate-400">Start with a task, then drag blocks to reorder the agent sequence.</CardDescription>
+            <CardDescription className="text-slate-400">Start with a goal, then shape the agent chain, checkpoints, and handoffs.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
@@ -113,8 +133,14 @@ export function OrchestratorPage() {
             />
 
             <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" className="bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={applyWorkflowPreset}>
+                Auto-build Workflow
+              </Button>
               <Button type="button" size="sm" variant="outline" className="border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800" onClick={() => addAgent("researcher")}>
                 + Researcher
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800" onClick={() => addAgent("strategist")}>
+                + Strategist
               </Button>
               <Button type="button" size="sm" variant="outline" className="border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800" onClick={() => addAgent("writer")}>
                 + Writer
@@ -168,17 +194,36 @@ export function OrchestratorPage() {
               </p>
             </div>
 
+            <div className="rounded-md border border-slate-700 bg-slate-900/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Live map</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                {agents.map((agent, index) => (
+                  <div key={agent.id} className="rounded-lg border border-slate-700 bg-slate-950/80 p-3 text-xs">
+                    <p className="font-semibold text-slate-100">{AGENT_LABELS[agent.type]}</p>
+                    <p className="mt-1 text-slate-400">Step {index + 1}</p>
+                    <p className="mt-2 text-slate-300">
+                      {index === 0
+                        ? "Receives the goal"
+                        : index === agents.length - 1
+                          ? "Delivers the final result"
+                          : "Receives the baton"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <Button
               type="button"
               variant={hitlEnabled ? "default" : "outline"}
               className={hitlEnabled ? "bg-amber-500/20 text-amber-100" : "border-slate-700 bg-slate-900 text-slate-200"}
               onClick={() => setHitlEnabled((current) => !current)}
             >
-              {hitlEnabled ? "HITL: ON" : "HITL: OFF"}
+              {hitlEnabled ? "HITL Checkpoints: ON" : "HITL Checkpoints: OFF"}
             </Button>
 
             <Button className="h-11 w-full bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => void runWorkflow()} disabled={running}>
-              {running ? "Running..." : "Run Agent Workflow"}
+              {running ? "Running..." : "Run Agentic Workflow"}
             </Button>
             {pendingAgent ? (
               <Button
@@ -196,6 +241,7 @@ export function OrchestratorPage() {
           <Card className="border-slate-700/70 bg-slate-950/80">
             <CardHeader>
               <CardTitle className="text-base">Handoff Timeline</CardTitle>
+              <CardDescription className="text-slate-400">A2A handoffs stay automatic until the sequence reaches a checkpoint.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {handoffs.length === 0 ? (
@@ -207,6 +253,7 @@ export function OrchestratorPage() {
                     <p className="text-slate-400">
                       {new Date(handoff.startedAt).toLocaleTimeString()} {" -> "} {new Date(handoff.finishedAt).toLocaleTimeString()}
                     </p>
+                    <p className="mt-1 text-slate-300">{handoff.trace}</p>
                     <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-slate-300">{handoff.output}</p>
                   </div>
                 ))
@@ -216,10 +263,25 @@ export function OrchestratorPage() {
 
           <Card className="border-slate-700/70 bg-slate-950/80">
             <CardHeader>
-              <CardTitle className="text-base">Final Output</CardTitle>
+              <CardTitle className="text-base">Reasoning Trace</CardTitle>
+              <CardDescription className="text-slate-400">High-level summaries of how the task moved from one agent to the next.</CardDescription>
             </CardHeader>
             <CardContent>
-              <pre className="min-h-52 overflow-auto rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-200">{result || "Run the workflow to see result."}</pre>
+              {traces.length === 0 ? (
+                <pre className="min-h-52 overflow-auto rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-200">{result || "Run the workflow to see result."}</pre>
+              ) : (
+                <div className="space-y-2">
+                  {traces.map((trace) => (
+                    <div key={`${trace.agent}-${trace.step}`} className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-200">
+                      <p className="font-semibold text-cyan-200">
+                        Step {trace.step}: {trace.agent}
+                      </p>
+                      <p className="mt-1 text-slate-300">{trace.summary}</p>
+                    </div>
+                  ))}
+                  <pre className="overflow-auto rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-200">{result || "Run the workflow to see result."}</pre>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

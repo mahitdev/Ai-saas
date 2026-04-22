@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,17 @@ export function ModelLabPage() {
   const [domainInput, setDomainInput] = useState("Review this policy document for risk and required actions.");
   const [domainOutput, setDomainOutput] = useState("");
   const [playbooks, setPlaybooks] = useState<string[]>([]);
+  const [layoutMode, setLayoutMode] = useState<"auto" | "spreadsheet" | "code" | "docs" | "chat">("auto");
   const [status, setStatus] = useState("Loading Model Lab profile...");
+
+  const predictedLayout = useMemo<"spreadsheet" | "code" | "docs" | "chat">(() => {
+    const input = `${domainInput} ${systemPrompt} ${playbooks.join(" ")}`.toLowerCase();
+    if (layoutMode !== "auto") return layoutMode;
+    if (/spreadsheet|table|invoice|budget|csv|finance/.test(input)) return "spreadsheet";
+    if (/code|api|bug|pull request|typescript|javascript|deploy/.test(input)) return "code";
+    if (/doc|policy|contract|brief|report|pdf/.test(input)) return "docs";
+    return "chat";
+  }, [domainInput, layoutMode, playbooks, systemPrompt]);
 
   useEffect(() => {
     async function loadProfile() {
@@ -99,7 +109,7 @@ export function ModelLabPage() {
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
             <CardTitle>Model Lab</CardTitle>
-            <CardDescription className="text-slate-400">Tune behavior, upload knowledge, and choose an engine profile.</CardDescription>
+            <CardDescription className="text-slate-400">Tune behavior, upload knowledge, and let the interface adapt to the task.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-3">
@@ -225,6 +235,91 @@ export function ModelLabPage() {
             <pre className="overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-2 text-xs text-slate-200">
               {domainOutput || "Template output will appear here."}
             </pre>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-700/70 bg-slate-950/80">
+          <CardHeader>
+            <CardTitle>Generative UI Preview</CardTitle>
+            <CardDescription className="text-slate-400">The layout shifts by intent, so users see the most useful widget first.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2 md:grid-cols-5">
+              {(["auto", "spreadsheet", "code", "docs", "chat"] as const).map((mode) => (
+                <Button
+                  key={mode}
+                  variant={layoutMode === mode ? "default" : "outline"}
+                  className={layoutMode === mode ? "bg-cyan-500/20 text-cyan-100" : "border-slate-700 bg-slate-900 text-slate-200"}
+                  onClick={() => setLayoutMode(mode)}
+                >
+                  {mode === "auto" ? "Auto intent" : mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </Button>
+              ))}
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Predicted layout</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-100">{predictedLayout}</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  This panel would morph into the best-fit widget for the current task.
+                </p>
+
+                {predictedLayout === "spreadsheet" ? (
+                  <div className="mt-4 overflow-hidden rounded-lg border border-slate-700">
+                    <div className="grid grid-cols-4 bg-slate-950 text-xs text-slate-300">
+                      <div className="border-r border-slate-700 p-2">Item</div>
+                      <div className="border-r border-slate-700 p-2">Owner</div>
+                      <div className="border-r border-slate-700 p-2">Status</div>
+                      <div className="p-2">Value</div>
+                    </div>
+                    {["Invoice 1482", "Budget Review", "Forecast Check"].map((row, index) => (
+                      <div key={row} className="grid grid-cols-4 bg-slate-900/60 text-sm text-slate-200">
+                        <div className="border-t border-r border-slate-700 p-2">{row}</div>
+                        <div className="border-t border-r border-slate-700 p-2">AI Agent</div>
+                        <div className="border-t border-r border-slate-700 p-2">{index === 0 ? "Ready" : "Queued"}</div>
+                        <div className="border-t border-slate-700 p-2">{index + 1}x</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : predictedLayout === "code" ? (
+                  <div className="mt-4 rounded-lg border border-slate-700 bg-slate-950 p-4 font-mono text-xs text-slate-200">
+                    <p className="text-cyan-300">// IDE mode</p>
+                    <p className="mt-2">const workflow = await agent.run({"{"} intent: "build" {"}"});</p>
+                    <p>workflow.on("checkpoint", approve);</p>
+                    <p>workflow.on("handoff", traceStep);</p>
+                  </div>
+                ) : predictedLayout === "docs" ? (
+                  <div className="mt-4 space-y-2 rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200">
+                    <p className="font-semibold text-cyan-200">Document Review</p>
+                    <p>• Extract policy requirements</p>
+                    <p>• Flag gaps and exceptions</p>
+                    <p>• Produce a clean summary and action list</p>
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-2 rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200">
+                    <p className="font-semibold text-cyan-200">Conversation Console</p>
+                    <p>Assistant memory active.</p>
+                    <p>Live context, next actions, and follow-ups pinned to the top.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-fuchsia-300">Intent-driven widgets</p>
+                  <p className="mt-2 text-sm text-slate-300">
+                    Spreadsheet tasks open a grid, code tasks open an editor, and document work opens a reading view.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">MCP-ready context</p>
+                  <p className="mt-2 text-sm text-slate-300">
+                    The same layout can pull in local files, Drive content, and workspace context without manual upload.
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

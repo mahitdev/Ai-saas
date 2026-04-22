@@ -5,7 +5,7 @@ import { getAuthenticatedUser, unauthorized } from "@/lib/server/session";
 
 const orchestrateSchema = z.object({
   task: z.string().trim().min(1).max(4000),
-  agents: z.array(z.enum(["researcher", "writer", "compliance"])).min(1).max(8),
+  agents: z.array(z.enum(["researcher", "strategist", "writer", "compliance"])).min(1).max(8),
   checkpoints: z.array(z.number().int().min(0).max(7)).optional().default([]),
   executionId: z.string().optional(),
   approved: z.boolean().optional().default(false),
@@ -15,8 +15,8 @@ type ExecutionState = {
   id: string;
   userId: string;
   task: string;
-  agents: Array<"researcher" | "writer" | "compliance">;
-  handoffs: Array<{ agent: string; startedAt: string; finishedAt: string; output: string }>;
+  agents: Array<"researcher" | "strategist" | "writer" | "compliance">;
+  handoffs: Array<{ agent: string; startedAt: string; finishedAt: string; output: string; trace: string }>;
   baton: string;
   cursor: number;
   checkpoints: number[];
@@ -24,15 +24,33 @@ type ExecutionState = {
 
 const executionStore = new Map<string, ExecutionState>();
 
-function runAgent(agent: "researcher" | "writer" | "compliance", baton: string) {
+function runAgent(agent: "researcher" | "strategist" | "writer" | "compliance", baton: string) {
   if (agent === "researcher") {
     return `Research Notes:\n- Key context about: ${baton}\n- Market trend snapshot\n- Risks and opportunities`;
+  }
+  if (agent === "strategist") {
+    return `Strategy Map:\n- Objective: ${baton}\n- Priority sequence: research, decision, execution\n- Risks: scope drift, approvals, timing\n- Next handoff: turn the brief into a clear execution plan`;
   }
   if (agent === "writer") {
     return `Draft Output:\n${baton}\n\nFinal narrative:\nThis plan addresses user intent with clear actions and timeline.`;
   }
   const riskFlags = /(guaranteed|secret|bypass|hack|illegal)/i.test(baton) ? "flagged" : "clear";
   return `Compliance Review (${riskFlags}):\n${baton}\n\nChecks: policy alignment, safety language, legal tone.`;
+}
+
+function traceSummary(agent: "researcher" | "strategist" | "writer" | "compliance", baton: string) {
+  if (agent === "researcher") {
+    return `Researched the goal and surfaced the most relevant context for the next agent.`;
+  }
+  if (agent === "strategist") {
+    return `Converted research into an execution plan with priorities, sequence, and risks.`;
+  }
+  if (agent === "writer") {
+    return `Turned the plan into a user-facing draft or deliverable.`;
+  }
+  return /flagged/i.test(baton)
+    ? `Reviewed the output, flagged potential policy risks, and prepared a safe version.`
+    : `Validated the output against policy and safety rules before the final handoff.`;
 }
 
 export async function POST(request: Request) {
@@ -88,7 +106,7 @@ export async function POST(request: Request) {
     const startedAt = new Date().toISOString();
     state.baton = runAgent(agent, state.baton);
     const finishedAt = new Date().toISOString();
-    state.handoffs.push({ agent, startedAt, finishedAt, output: state.baton });
+    state.handoffs.push({ agent, startedAt, finishedAt, output: state.baton, trace: traceSummary(agent, state.baton) });
     state.cursor = index + 1;
   }
 
@@ -97,6 +115,11 @@ export async function POST(request: Request) {
   return NextResponse.json({
     result: state.baton,
     handoffs: state.handoffs,
+    traces: state.handoffs.map((handoff, index) => ({
+      step: index + 1,
+      agent: handoff.agent,
+      summary: handoff.trace,
+    })),
     executionId: state.id,
     paused: false,
   });

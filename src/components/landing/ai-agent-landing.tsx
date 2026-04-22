@@ -678,6 +678,88 @@ export function AiAgentLanding() {
         </section>
 
         <section className="relative flex min-h-[100svh] items-center overflow-hidden px-4 py-12 sm:px-6 lg:px-8">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_25%,rgba(103,232,249,0.11),transparent_26%),radial-gradient(circle_at_75%_30%,rgba(168,85,247,0.11),transparent_24%),linear-gradient(180deg,rgba(4,8,20,0.98),rgba(2,4,12,0.98))]" />
+          <div className="relative mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[0.88fr_1.12fr]">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/70 backdrop-blur-xl">
+                <Shield className="size-3.5 text-cyan-300" />
+                Product pillars
+              </div>
+              <h2 className="max-w-3xl text-balance text-4xl font-semibold tracking-[-0.06em] text-white sm:text-5xl lg:text-6xl">
+                Built for autonomous work, trusted delivery, and measurable outcomes.
+              </h2>
+              <p className="max-w-2xl text-pretty text-base leading-7 text-white/68 sm:text-lg">
+                AI Agent combines orchestration, generative UI, MCP connections, zero-trust security, and outcome-based pricing in one workspace.
+              </p>
+              <TiltCard className="max-w-md">
+                <p className="text-xs uppercase tracking-[0.28em] text-white/45">ROI dashboard</p>
+                <p className="mt-3 text-4xl font-semibold text-white">$1 / task</p>
+                <p className="mt-2 text-sm leading-6 text-white/60">Estimate savings from successful outcomes instead of just seats and usage.</p>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/45">Hours saved</p>
+                    <p className="mt-1 text-lg font-semibold text-cyan-100">41h</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/45">Task outcome</p>
+                    <p className="mt-1 text-lg font-semibold text-emerald-100">Tracked</p>
+                  </div>
+                </div>
+              </TiltCard>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                {
+                  icon: Bot,
+                  title: "Autonomous orchestration",
+                  description: "Spawn researcher, strategist, writer, and compliance agents from one goal.",
+                },
+                {
+                  icon: Sparkles,
+                  title: "Generative UI",
+                  description: "Morph the dashboard into grids, editors, or chat views by intent.",
+                },
+                {
+                  icon: TimerReset,
+                  title: "MCP-native context",
+                  description: "Connect local files, Drive, GitHub, and Slack without manual uploads.",
+                },
+                {
+                  icon: Shield,
+                  title: "Zero-trust gateway",
+                  description: "Scrub PII, enforce policy, and log the AI audit trail automatically.",
+                },
+                {
+                  icon: TrendingUp,
+                  title: "Outcome pricing",
+                  description: "Measure value per invoice, task, or bug fixed instead of per seat.",
+                },
+                {
+                  icon: BarChart3,
+                  title: "HITL checkpoints",
+                  description: "Pause high-stakes actions so people can review and approve the plan.",
+                },
+                {
+                  icon: Flame,
+                  title: "Vertical deep logic",
+                  description: "Use domain-specific playbooks and RAG for industry workflows.",
+                },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <TiltCard key={item.title}>
+                    <Icon className="size-5 text-cyan-200" />
+                    <h3 className="mt-4 text-lg font-semibold text-white">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-white/60">{item.description}</p>
+                  </TiltCard>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="relative flex min-h-[100svh] items-center overflow-hidden px-4 py-12 sm:px-6 lg:px-8">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(139,92,246,0.12),transparent_24%),radial-gradient(circle_at_20%_70%,rgba(103,232,249,0.1),transparent_22%),linear-gradient(180deg,rgba(2,4,12,0.98),rgba(4,8,20,0.98))]" />
           <div className="relative mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="space-y-6">
