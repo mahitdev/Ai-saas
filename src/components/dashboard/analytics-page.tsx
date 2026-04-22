@@ -34,8 +34,19 @@ type LiveAnalysisSnapshot = {
   };
   recommendation: string;
   highlights: string[];
+  mcpContext: {
+    source: "google_drive" | "github" | "local_files" | "postgres";
+    target: string;
+    contextSummary: string;
+    discoveredResources: string[];
+    liveSignals: string[];
+    secureSessionToken: string;
+    lastUsedAt: string;
+  } | null;
   source: "database" | "fallback_memory";
 };
+
+type McpContext = NonNullable<LiveAnalysisSnapshot["mcpContext"]>;
 
 type SystemAgentRun = {
   analysis: LiveAnalysisSnapshot;
@@ -50,6 +61,10 @@ function formatStatus(status: LiveAnalysisSnapshot["systemStatus"]) {
   if (status === "needs_attention") return "Needs attention";
   if (status === "busy") return "Busy";
   return "Healthy";
+}
+
+function formatContextSource(source: McpContext["source"]) {
+  return source.replace("_", " ");
 }
 
 export function AnalyticsPage() {
@@ -159,6 +174,7 @@ export function AnalyticsPage() {
   const liveUpdatedAt = liveAnalysis
     ? new Date(liveAnalysis.generatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
     : "Waiting";
+  const contextSource = liveAnalysis?.mcpContext ? formatContextSource(liveAnalysis.mcpContext.source) : "No MCP source";
 
   return (
     <main className="min-h-svh bg-[linear-gradient(180deg,#020617_0%,#111827_100%)] p-4 text-slate-100 md:p-8">
@@ -171,6 +187,17 @@ export function AnalyticsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-4">
+            <div className="md:col-span-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs text-slate-300">
+                Stream: {streamState}
+              </span>
+              <span className="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs text-slate-300">
+                Analysis source: {liveAnalysis?.source ?? "stream"}
+              </span>
+              <span className="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs text-slate-300">
+                MCP: {contextSource}
+              </span>
+            </div>
             <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
               <p className="text-xs uppercase tracking-wide text-cyan-300">Status</p>
               <p className="mt-1 text-xl font-semibold text-cyan-100">{liveStatus}</p>
@@ -304,6 +331,21 @@ export function AnalyticsPage() {
                   <p className="text-2xl font-semibold text-slate-100">{liveAnalysis?.metrics.tasksDone ?? 0}</p>
                 </div>
               </div>
+              {liveAnalysis?.mcpContext ? (
+                <div className="mt-4 rounded-md border border-cyan-500/20 bg-cyan-500/10 p-3">
+                  <p className="text-xs uppercase tracking-wide text-cyan-200">Connected MCP Context</p>
+                  <p className="mt-1 text-sm text-slate-200">{liveAnalysis.mcpContext.contextSummary}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {liveAnalysis.mcpContext.discoveredResources.slice(0, 4).map((resource) => (
+                      <span key={resource} className="rounded-full border border-cyan-500/20 bg-slate-950/60 px-2 py-1 text-[11px] text-cyan-100">
+                        {resource}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-4 text-xs text-slate-500">Connect MCP to unlock external context in live analysis.</p>
+              )}
             </div>
           </CardContent>
         </Card>

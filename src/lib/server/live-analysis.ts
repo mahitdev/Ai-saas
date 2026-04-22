@@ -2,6 +2,7 @@ import { and, count, desc, eq, gte, ne } from "drizzle-orm";
 
 import { db } from "@/db";
 import { aiConversation, aiMessage, project, projectTask } from "@/db/schema";
+import { getFallbackMcpContext } from "@/lib/server/fallback-persistence";
 
 const injectionPatterns = /(ignore previous|system prompt|jailbreak|bypass|developer mode|act as|override rules)/i;
 
@@ -21,6 +22,15 @@ export type LiveAnalysisSnapshot = {
   };
   recommendation: string;
   highlights: string[];
+  mcpContext: {
+    source: "google_drive" | "github" | "local_files" | "postgres";
+    target: string;
+    contextSummary: string;
+    discoveredResources: string[];
+    liveSignals: string[];
+    secureSessionToken: string;
+    lastUsedAt: string;
+  } | null;
   source: "database" | "fallback_memory";
 };
 
@@ -53,6 +63,7 @@ function createFallbackAnalysis(): LiveAnalysisSnapshot {
     },
     recommendation: "Connect a conversation or MCP source to start live analysis.",
     highlights: ["No workspace data loaded yet."],
+    mcpContext: null,
     source: "fallback_memory",
   };
 }
@@ -96,12 +107,14 @@ export async function getLiveAnalysis(userId: string): Promise<LiveAnalysisSnaps
     const promptInjectionAlerts = messageRows.filter(
       (message) => message.role === "user" && injectionPatterns.test(message.content),
     ).length;
+    const mcpContext = getFallbackMcpContext(userId);
 
     const highlights = [
       tasksOpen > 0 ? `${tasksOpen} open tasks` : "No open tasks",
       overdueTasks > 0 ? `${overdueTasks} overdue tasks` : "No overdue tasks",
       promptInjectionAlerts > 0 ? `${promptInjectionAlerts} prompt injection alerts` : "No prompt injection alerts",
       assistantMessages24h > 0 ? `${assistantMessages24h} assistant replies in the last 24h` : "No assistant replies in the last 24h",
+      mcpContext ? `MCP: ${mcpContext.source} connected` : "No MCP context connected",
     ].slice(0, 4);
 
     let recommendation = "Your workspace is quiet. Start a chat or connect MCP to generate fresh signal.";
@@ -116,9 +129,12 @@ export async function getLiveAnalysis(userId: string): Promise<LiveAnalysisSnaps
     } else if (messages24h > 0) {
       recommendation = "Run the system agent on recent conversations to turn them into actionable follow-ups.";
       systemStatus = "busy";
+    } else if (mcpContext) {
+      recommendation = `Use the connected ${mcpContext.source.replace("_", " ")} context to generate a live follow-up from ${mcpContext.target}.`;
+      systemStatus = "busy";
     }
 
-    const confidence = Math.max(42, Math.min(98, 92 - promptInjectionAlerts * 8 - overdueTasks * 5));
+    const confidence = Math.max(42, Math.min(98, 92 - promptInjectionAlerts * 8 - overdueTasks * 5 + (mcpContext ? 4 : 0)));
 
     return {
       generatedAt: new Date().toISOString(),
@@ -136,6 +152,17 @@ export async function getLiveAnalysis(userId: string): Promise<LiveAnalysisSnaps
       },
       recommendation,
       highlights,
+      mcpContext: mcpContext
+        ? {
+            source: mcpContext.source,
+            target: mcpContext.target,
+            contextSummary: mcpContext.contextSummary,
+            discoveredResources: mcpContext.discoveredResources,
+            liveSignals: mcpContext.liveSignals,
+            secureSessionToken: mcpContext.secureSessionToken,
+            lastUsedAt: mcpContext.lastUsedAt,
+          }
+        : null,
       source: "database",
     };
   } catch {
@@ -151,6 +178,7 @@ function clampText(text: string, maxLength: number) {
 
 export async function runSystemAgent(userId: string, goal: string, execute: boolean) {
   const analysis = await getLiveAnalysis(userId);
+  const mcpContext = analysis.mcpContext;
 
   const [latestProject] = await db
     .select({ id: project.id, name: project.name })
@@ -166,6 +194,9 @@ export async function runSystemAgent(userId: string, goal: string, execute: bool
     analysis.metrics.overdueTasks > 0
       ? "Create or reassign follow-up tasks for overdue work."
       : "Capture the next best task while the workspace is fresh.",
+    mcpContext
+      ? `Pull live context from ${mcpContext.source.replace("_", " ")} for ${mcpContext.target}.`
+      : "Connect MCP to let the system agent read external context live.",
     latestProject
       ? `Attach the next action to project "${latestProject.name}".`
       : "Create a project to capture the next action.",
@@ -175,7 +206,9 @@ export async function runSystemAgent(userId: string, goal: string, execute: bool
   if (execute && latestProject) {
     const title = clampText(`System agent: ${goal}`, 200);
     const description = clampText(
-      `${analysis.recommendation} | Live status: ${analysis.systemStatus} | Confidence: ${analysis.confidence}%`,
+      `${analysis.recommendation} | Live status: ${analysis.systemStatus} | Confidence: ${analysis.confidence}%${
+        mcpContext ? ` | MCP: ${mcpContext.contextSummary}` : ""
+      }`,
       2000,
     );
     const [createdTask] = await db

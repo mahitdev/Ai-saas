@@ -25,11 +25,11 @@ export async function GET(request: Request) {
           controller.enqueue(
             encoder.encode(
               encodeEvent({
-                generatedAt: new Date().toISOString(),
-                systemStatus: "healthy",
-                confidence: 50,
-                metrics: {
-                  conversations: 0,
+              generatedAt: new Date().toISOString(),
+              systemStatus: "healthy",
+              confidence: 50,
+              metrics: {
+                conversations: 0,
                   messages24h: 0,
                   assistantMessages24h: 0,
                   tasksTotal: 0,
@@ -37,13 +37,14 @@ export async function GET(request: Request) {
                   tasksDone: 0,
                   overdueTasks: 0,
                   promptInjectionAlerts: 0,
-                },
-                recommendation: "Live analysis fallback is active.",
-                highlights: ["Streaming snapshot unavailable."],
-                source: "fallback_memory",
-              }),
-            ),
-          );
+              },
+              recommendation: "Live analysis fallback is active.",
+              highlights: ["Streaming snapshot unavailable."],
+              mcpContext: null,
+              source: "fallback_memory",
+            }),
+          ),
+        );
         }
       };
 

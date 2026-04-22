@@ -88,6 +88,34 @@ type FallbackXaiLog = {
   createdAt: string;
 };
 
+type FallbackMcpContext = {
+  id: string;
+  userId: string;
+  source: "google_drive" | "github" | "local_files" | "postgres";
+  target: string;
+  secureSessionToken: string;
+  capabilities: string[];
+  discoveredResources: string[];
+  contextSummary: string;
+  liveSignals: string[];
+  connectedAt: string;
+  lastUsedAt: string;
+};
+
+type FallbackDesktopAgentSession = {
+  id: string;
+  userId: string;
+  platform: "windows" | "macos" | "linux" | "browser";
+  goal: string;
+  action: "open_app" | "focus_window" | "capture_clipboard" | "run_hotkey" | "inspect_context";
+  bridgeToken: string;
+  instructions: string[];
+  safetyNotes: string[];
+  status: "pending" | "ready" | "running" | "complete";
+  createdAt: string;
+  updatedAt: string;
+};
+
 type FallbackPromptTemplate = {
   id: string;
   userId: string;
@@ -110,6 +138,8 @@ const retentionInsightsByUser = new Map<string, FallbackRetentionInsight>();
 const billingProfilesByUser = new Map<string, FallbackBillingProfile>();
 const billingTransactionsByUser = new Map<string, FallbackBillingTransaction[]>();
 const xaiLogsByUser = new Map<string, FallbackXaiLog[]>();
+const mcpContextsByUser = new Map<string, FallbackMcpContext>();
+const desktopAgentSessionsByUser = new Map<string, FallbackDesktopAgentSession[]>();
 const promptTemplates = new Map<string, FallbackPromptTemplate>();
 const promptVotes = new Set<string>();
 
@@ -330,6 +360,71 @@ export function addFallbackXaiLog(log: FallbackXaiLog) {
 
 export function getFallbackXaiLogs(userId: string) {
   return xaiLogsByUser.get(userId) ?? [];
+}
+
+export function saveFallbackMcpContext(
+  userId: string,
+  context: Omit<FallbackMcpContext, "id" | "userId" | "connectedAt" | "lastUsedAt">,
+) {
+  const next: FallbackMcpContext = {
+    ...context,
+    id: crypto.randomUUID(),
+    userId,
+    connectedAt: new Date().toISOString(),
+    lastUsedAt: new Date().toISOString(),
+  };
+  mcpContextsByUser.set(userId, next);
+  return next;
+}
+
+export function getFallbackMcpContext(userId: string) {
+  return mcpContextsByUser.get(userId) ?? null;
+}
+
+export function touchFallbackMcpContext(userId: string) {
+  const existing = mcpContextsByUser.get(userId);
+  if (!existing) return null;
+  const next = { ...existing, lastUsedAt: new Date().toISOString() };
+  mcpContextsByUser.set(userId, next);
+  return next;
+}
+
+export function addFallbackDesktopAgentSession(
+  userId: string,
+  session: Omit<FallbackDesktopAgentSession, "id" | "userId" | "createdAt" | "updatedAt">,
+) {
+  const next: FallbackDesktopAgentSession = {
+    ...session,
+    id: crypto.randomUUID(),
+    userId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  const list = desktopAgentSessionsByUser.get(userId) ?? [];
+  list.unshift(next);
+  desktopAgentSessionsByUser.set(userId, list.slice(0, 20));
+  return next;
+}
+
+export function getFallbackDesktopAgentSession(userId: string, sessionId: string) {
+  const list = desktopAgentSessionsByUser.get(userId) ?? [];
+  return list.find((item) => item.id === sessionId) ?? null;
+}
+
+export function updateFallbackDesktopAgentSession(
+  userId: string,
+  sessionId: string,
+  updates: Partial<Omit<FallbackDesktopAgentSession, "id" | "userId" | "createdAt">>,
+) {
+  const list = desktopAgentSessionsByUser.get(userId) ?? [];
+  let updated: FallbackDesktopAgentSession | null = null;
+  const next = list.map((item) => {
+    if (item.id !== sessionId) return item;
+    updated = { ...item, ...updates, updatedAt: new Date().toISOString() };
+    return updated;
+  });
+  desktopAgentSessionsByUser.set(userId, next);
+  return updated;
 }
 
 export function addFallbackPromptTemplate(template: FallbackPromptTemplate) {

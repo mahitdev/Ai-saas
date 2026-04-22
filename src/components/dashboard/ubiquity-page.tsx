@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,11 +8,24 @@ import { Input } from "@/components/ui/input";
 
 type McpSource = "google_drive" | "github" | "local_files" | "postgres";
 type BotPlatform = "slack" | "teams";
+type DesktopPlatform = "windows" | "macos" | "linux" | "browser";
+type DesktopAction = "open_app" | "focus_window" | "capture_clipboard" | "run_hotkey" | "inspect_context";
 
 export function UbiquityPage() {
   const [mcpSource, setMcpSource] = useState<McpSource>("github");
   const [mcpTarget, setMcpTarget] = useState("");
   const [mcpResult, setMcpResult] = useState<string>("");
+  const [mcpLiveContext, setMcpLiveContext] = useState<{
+    connected?: boolean;
+    source?: McpSource;
+    target?: string;
+    contextSummary?: string;
+    liveSignals?: string[];
+    discoveredResources?: string[];
+    secureSessionToken?: string;
+    lastUsedAt?: string;
+    note?: string;
+  } | null>(null);
   const [botPlatform, setBotPlatform] = useState<BotPlatform>("slack");
   const [botMessage, setBotMessage] = useState("@AI Agent summarize this chat thread");
   const [botReply, setBotReply] = useState("");
@@ -22,11 +35,42 @@ export function UbiquityPage() {
   const [pageUrl, setPageUrl] = useState("https://app.example.com/dashboard/chat");
   const [highlightedText, setHighlightedText] = useState("Summarize this conversation and capture the next action items.");
   const [contextHelp, setContextHelp] = useState("");
+  const [desktopPlatform, setDesktopPlatform] = useState<DesktopPlatform>("browser");
+  const [desktopAction, setDesktopAction] = useState<DesktopAction>("inspect_context");
+  const [desktopGoal, setDesktopGoal] = useState("Review the current desktop state and prepare the next safe action.");
+  const [desktopTarget, setDesktopTarget] = useState("workspace");
+  const [desktopBridge, setDesktopBridge] = useState<{
+    sessionId?: string;
+    bridgeToken?: string;
+    status?: string;
+    instructions?: string[];
+    safetyNotes?: string[];
+    note?: string;
+  } | null>(null);
 
   const quickCommands = useMemo(
     () => ["/summarize-last-meeting", "/draft-followup-email", "/extract-action-items", "/status-report"],
     [],
   );
+
+  useEffect(() => {
+    void (async () => {
+      const response = await fetch("/api/mcp/context");
+      if (!response.ok) return;
+      const payload = (await response.json()) as {
+        connected?: boolean;
+        source?: McpSource;
+        target?: string;
+        contextSummary?: string;
+        liveSignals?: string[];
+        discoveredResources?: string[];
+        secureSessionToken?: string;
+        lastUsedAt?: string;
+        note?: string;
+      };
+      setMcpLiveContext(payload);
+    })();
+  }, []);
 
   async function connectMcp() {
     const response = await fetch("/api/mcp/context", {
@@ -36,17 +80,61 @@ export function UbiquityPage() {
     });
     const payload = (await response.json()) as {
       connected?: boolean;
+      source?: McpSource;
+      target?: string;
       secureSessionToken?: string;
       discoveredResources?: string[];
+      liveSignals?: string[];
+      contextSummary?: string;
+      lastUsedAt?: string;
       note?: string;
     };
     if (!response.ok || !payload.connected) {
       setMcpResult("MCP connection failed.");
       return;
     }
+    setMcpLiveContext({
+      connected: payload.connected,
+      source: payload.source ?? mcpSource,
+      target: payload.target ?? (mcpTarget || "default"),
+      contextSummary: payload.contextSummary,
+      liveSignals: payload.liveSignals,
+      discoveredResources: payload.discoveredResources,
+      secureSessionToken: payload.secureSessionToken,
+      lastUsedAt: payload.lastUsedAt,
+      note: payload.note,
+    });
     setMcpResult(
       `Connected.\nSession: ${payload.secureSessionToken}\nResources:\n- ${(payload.discoveredResources ?? []).join("\n- ")}\n${payload.note ?? ""}`,
     );
+  }
+
+  async function createDesktopBridge() {
+    const response = await fetch("/api/desktop-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        platform: desktopPlatform,
+        action: desktopAction,
+        target: desktopTarget,
+        goal: desktopGoal,
+        approved: false,
+      }),
+    });
+    const payload = (await response.json()) as {
+      sessionId?: string;
+      bridgeToken?: string;
+      status?: string;
+      instructions?: string[];
+      safetyNotes?: string[];
+      note?: string;
+      error?: string;
+    };
+    if (!response.ok) {
+      setDesktopBridge({ note: payload.error ?? "Desktop bridge creation failed." });
+      return;
+    }
+    setDesktopBridge(payload);
   }
 
   async function testBot() {
@@ -100,6 +188,11 @@ export function UbiquityPage() {
               Entry points across browser, desktop, IDE, and team chat so users can trigger AI Agent anywhere.
             </CardDescription>
           </CardHeader>
+          <CardContent className="flex flex-wrap gap-2 text-xs text-slate-300">
+            <span className="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1">Desktop bridge: active</span>
+            <span className="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1">MCP: live context ready</span>
+            <span className="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1">Command bar: Cmd/Ctrl + K</span>
+          </CardContent>
         </Card>
 
         <div className="grid gap-4 lg:grid-cols-2">
@@ -151,11 +244,79 @@ export function UbiquityPage() {
               <pre className="overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-2 text-xs text-slate-200">
                 {mcpResult || "No MCP connection yet."}
               </pre>
+              <div className="rounded-md border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-300">
+                <p className="font-semibold text-cyan-200">Live MCP Context</p>
+                <p className="mt-1">{mcpLiveContext?.contextSummary ?? "No live context loaded yet."}</p>
+                {mcpLiveContext?.liveSignals?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {mcpLiveContext.liveSignals.slice(0, 4).map((signal) => (
+                      <span key={signal} className="rounded-full border border-cyan-500/20 bg-slate-950/60 px-2 py-1 text-[11px] text-cyan-100">
+                        {signal}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="border-slate-700/70 bg-slate-950/80">
+            <CardHeader>
+              <CardTitle>Desktop Agent Bridge</CardTitle>
+              <CardDescription className="text-slate-400">
+                Create a secure runbook for a local desktop companion to execute approved actions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <select
+                  value={desktopPlatform}
+                  onChange={(event) => setDesktopPlatform(event.target.value as DesktopPlatform)}
+                  className="rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-sm text-slate-200"
+                >
+                  <option value="browser">Browser bridge</option>
+                  <option value="windows">Windows</option>
+                  <option value="macos">macOS</option>
+                  <option value="linux">Linux</option>
+                </select>
+                <select
+                  value={desktopAction}
+                  onChange={(event) => setDesktopAction(event.target.value as DesktopAction)}
+                  className="rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-sm text-slate-200"
+                >
+                  <option value="inspect_context">Inspect context</option>
+                  <option value="open_app">Open app</option>
+                  <option value="focus_window">Focus window</option>
+                  <option value="capture_clipboard">Capture clipboard</option>
+                  <option value="run_hotkey">Run hotkey</option>
+                </select>
+              </div>
+              <Input value={desktopTarget} onChange={(event) => setDesktopTarget(event.target.value)} className="border-slate-700 bg-slate-900 text-slate-100" />
+              <Input value={desktopGoal} onChange={(event) => setDesktopGoal(event.target.value)} className="border-slate-700 bg-slate-900 text-slate-100" />
+              <Button className="bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25" onClick={() => void createDesktopBridge()}>
+                Generate Desktop Runbook
+              </Button>
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-2 text-xs text-slate-200">
+                {desktopBridge?.note || "No desktop bridge generated yet."}
+              </div>
+              {desktopBridge?.instructions?.length ? (
+                <div className="rounded-md border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-300">
+                  <p className="font-semibold text-emerald-200">Runbook</p>
+                  <ol className="mt-2 list-decimal space-y-1 pl-4">
+                    {desktopBridge.instructions.map((instruction) => (
+                      <li key={instruction}>{instruction}</li>
+                    ))}
+                  </ol>
+                  {desktopBridge.safetyNotes?.length ? (
+                    <p className="mt-2 text-amber-200">Safety: {desktopBridge.safetyNotes.join(" ")}</p>
+                  ) : null}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
           <Card className="border-slate-700/70 bg-slate-950/80">
             <CardHeader>
               <CardTitle>Native Desktop Global Command Bar</CardTitle>
