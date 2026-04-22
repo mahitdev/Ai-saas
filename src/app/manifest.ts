@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "AI Agent Platform",
-    short_name: "MyAI",
+    name: "Ai agent",
+    short_name: "Ai agent",
     description: "AI chat platform with retention, trust, and growth controls.",
     start_url: "/",
     display: "standalone",

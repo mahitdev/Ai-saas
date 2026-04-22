@@ -28,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">MyAI Workspace</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">Ai agent Workspace</p>
             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
               <span>Organized AI tools</span>
               <span className="hidden h-1 w-1 rounded-full bg-slate-500 md:inline-block" />

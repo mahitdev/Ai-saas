@@ -162,7 +162,7 @@ export function GrindLockLanding() {
               <Flame className="size-5 text-cyan-300" />
             </div>
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.34em] text-white/85">GrindLock</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.34em] text-white/85">Ai agent</p>
               <p className="text-xs text-white/50">Discipline-first productivity</p>
             </div>
           </div>

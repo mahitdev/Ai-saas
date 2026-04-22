@@ -5,7 +5,7 @@ import { GrindLockLanding } from "@/components/landing/grindlock-landing";
 import { getServerSession } from "@/lib/server/session";
 
 export const metadata: Metadata = {
-  title: "GrindLock",
+  title: "Ai agent",
   description: "Discipline your time. Own your future.",
 };
 
