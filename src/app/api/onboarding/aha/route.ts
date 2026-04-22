@@ -25,6 +25,7 @@ export async function GET() {
       ready: false,
       note: "Aha report unlocks after your first 3 inputs.",
       remaining: 3 - firstInputs.length,
+      valueMilestone: "No-setup start: connect one file or account and get a first value milestone.",
     });
   }
 
@@ -36,7 +37,7 @@ export async function GET() {
   const focus = finance ? "Finance Optimization" : coding ? "Developer Productivity" : "Workflow Efficiency";
   const recommendation = productivity
     ? "Use command bar shortcuts + weekly digest to auto-summarize work blocks."
-    : "Use intent-driven panels and template workflows to speed repeated tasks.";
+    : "Use a single file or MCP connection to generate your first value milestone immediately.";
 
   return NextResponse.json({
     ready: true,
@@ -45,6 +46,7 @@ export async function GET() {
       recommendation,
       confidence: finance || coding || productivity ? 88 : 72,
       estimatedTwoWeekHoursSaved: finance ? 9 : coding ? 12 : 7,
+      valueMilestone: "Generated report + progress bar unlock after the first successful sync.",
     },
     sourceSamples: firstInputs,
   });

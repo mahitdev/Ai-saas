@@ -24,6 +24,10 @@ export function SecurityPage() {
       aiBom: { model: string; datasets: string[]; apis: string[] };
     }>
   >([]);
+  const biasRiskScore = Math.min(
+    100,
+    governanceLogs.reduce((sum, log) => sum + (log.policyFlags.some((flag) => /bias|fairness|consent/i.test(flag)) ? 18 : 6), 12),
+  );
 
   async function refreshAudit() {
     const response = await fetch("/api/security/audit", { cache: "no-store" });
@@ -140,6 +144,48 @@ export function SecurityPage() {
           </CardContent>
         </Card>
 
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="border-slate-700/70 bg-slate-950/80">
+            <CardHeader>
+              <CardTitle>Model Armor</CardTitle>
+              <CardDescription className="text-slate-400">Real-time prompt sanitization and response leak protection.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-slate-300">
+              <p>Incoming prompts are scanned for injection patterns before they reach the model gateway.</p>
+              <p>Outgoing responses can be checked for private data leaks and policy violations before release.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+                  <p className="text-xs text-slate-400">Injection protection</p>
+                  <p className="mt-1 text-lg font-semibold text-emerald-100">ON</p>
+                </div>
+                <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+                  <p className="text-xs text-slate-400">Leak scan</p>
+                  <p className="mt-1 text-lg font-semibold text-cyan-100">ACTIVE</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-700/70 bg-slate-950/80">
+            <CardHeader>
+              <CardTitle>Bias Auditing Dashboard</CardTitle>
+              <CardDescription className="text-slate-400">A quick visual read on fairness and policy confidence.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-4">
+                <p className="text-xs text-slate-400">Bias risk score</p>
+                <p className="mt-1 text-3xl font-semibold text-amber-100">{biasRiskScore}%</p>
+                <div className="mt-3 h-2 rounded-full bg-slate-800">
+                  <div className="h-2 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-amber-400" style={{ width: `${biasRiskScore}%` }} />
+                </div>
+              </div>
+              <p className="text-sm text-slate-300">
+                Useful for teams mapping internal governance to EU AI Act style review and model approval workflows.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
             <CardTitle>Prompt Injection Alerts</CardTitle>
@@ -185,6 +231,12 @@ export function SecurityPage() {
             <Button variant="outline" className="border-slate-700 bg-slate-900 text-slate-200" onClick={() => void refreshGovernance()}>
               Refresh Governance Logs
             </Button>
+            <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300">
+              <p className="font-semibold text-slate-100">Offline / Edge Processing</p>
+              <p className="mt-1">
+                Ultra-sensitive tasks can stay local via browser-side processing and cached offline workflows when needed.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

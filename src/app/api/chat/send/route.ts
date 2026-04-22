@@ -105,7 +105,7 @@ export async function POST(request: Request) {
         : /code|build|api|bug|deploy/.test(joined)
           ? "developer workflows"
           : "productivity automation";
-      onboardingAha = `Aha report: based on your first 3 prompts, your highest value path is ${focus}. Try Workflow Builder + Weekly Digest for immediate gains.`;
+      onboardingAha = `Value milestone reached: based on your first 3 prompts, your highest value path is ${focus}. Use a single file, MCP sync, or Workflow Builder to generate the next win.`;
     }
 
     return NextResponse.json({

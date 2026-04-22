@@ -41,6 +41,7 @@ export async function POST(request: Request) {
   const hoursSaved = Math.max(0, Number((assistantChars / 1400).toFixed(1)));
   const totalSavings = Number((hoursSaved * parsed.data.hourlyRate - parsed.data.subscriptionCost).toFixed(2));
   const outcomeBill = Number((successfulTasks * parsed.data.successfulTaskPrice).toFixed(2));
+  const payPerSuccess = Number((successfulTasks * 2).toFixed(2));
   const carbonKg = Number((assistantChars * 0.00000036).toFixed(6));
 
   return NextResponse.json({
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
       hourlyRate: parsed.data.hourlyRate,
       subscriptionCost: parsed.data.subscriptionCost,
       totalSavings,
+      payPerSuccess,
     },
     esg: {
       carbonFootprintKgCo2e: carbonKg,

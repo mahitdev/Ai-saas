@@ -22,6 +22,13 @@ type BillingPayload = {
 type XaiItem = { id: string; taskId: string; modelVersion: string; reasoning: string; sources: string[]; complianceFlags: string[]; createdAt: string };
 
 type PromptItem = { id: string; title: string; category: string; prompt: string; uses: number; rewardCredits: number };
+type OnboardingPayload = {
+  ready: boolean;
+  note?: string;
+  remaining?: number;
+  report?: { focus: string; recommendation: string; confidence: number; estimatedTwoWeekHoursSaved: number; valueMilestone: string };
+  valueMilestone?: string;
+};
 
 export function GrowthControlPage() {
   const [retention, setRetention] = useState<RetentionPayload | null>(null);
@@ -29,6 +36,7 @@ export function GrowthControlPage() {
   const [xaiLogs, setXaiLogs] = useState<XaiItem[]>([]);
   const [lineage, setLineage] = useState<Array<{ taskId: string; modelVersion: string; createdAt: string }>>([]);
   const [templates, setTemplates] = useState<PromptItem[]>([]);
+  const [onboarding, setOnboarding] = useState<OnboardingPayload | null>(null);
   const [routeTask, setRouteTask] = useState("Summarize this meeting and draft a short follow-up.");
   const [routeResult, setRouteResult] = useState<{ model: string; rationale: string } | null>(null);
   const [profileAnswer, setProfileAnswer] = useState("");
@@ -38,12 +46,13 @@ export function GrowthControlPage() {
   const [liveCreditAlert, setLiveCreditAlert] = useState<string | null>(null);
 
   async function loadAll() {
-    const [ret, bill, xai, lin, mkt] = await Promise.all([
+    const [ret, bill, xai, lin, mkt, aha] = await Promise.all([
       fetch("/api/retention/insights", { cache: "no-store" }),
       fetch("/api/billing/engine", { cache: "no-store" }),
       fetch("/api/trust/xai", { cache: "no-store" }),
       fetch("/api/trust/lineage", { cache: "no-store" }),
       fetch("/api/marketplace/prompts", { cache: "no-store" }),
+      fetch("/api/onboarding/aha", { cache: "no-store" }),
     ]);
 
     if (ret.ok) setRetention(await ret.json() as RetentionPayload);
@@ -51,6 +60,7 @@ export function GrowthControlPage() {
     if (xai.ok) setXaiLogs(((await xai.json()) as { logs: XaiItem[] }).logs);
     if (lin.ok) setLineage(((await lin.json()) as { lineage: Array<{ taskId: string; modelVersion: string; createdAt: string }> }).lineage);
     if (mkt.ok) setTemplates(((await mkt.json()) as { templates: PromptItem[] }).templates);
+    if (aha.ok) setOnboarding((await aha.json()) as OnboardingPayload);
 
     setStatus("Growth & Trust backend connected.");
   }
@@ -156,6 +166,29 @@ export function GrowthControlPage() {
             <CardDescription className="text-slate-400">Retention, monetization, governance, prompt routing, and marketplace tools in one workspace.</CardDescription>
           </CardHeader>
           <CardContent><p className="text-xs text-slate-400">{status}</p></CardContent>
+        </Card>
+
+        <Card className="border-slate-700 bg-slate-950/80">
+          <CardHeader>
+            <CardTitle>No-Setup Start</CardTitle>
+            <CardDescription className="text-slate-400">Upload one file or connect one account, then show value before the dashboard gets crowded.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-slate-300">
+            <p>{onboarding?.note ?? "A one-file or one-account onboarding milestone will appear here."}</p>
+            <p className="text-xs text-slate-400">
+              {onboarding?.report?.valueMilestone ?? onboarding?.valueMilestone ?? "Value milestone pending."}
+            </p>
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+                <p className="text-xs text-slate-400">First win</p>
+                <p className="mt-1 font-semibold text-cyan-100">{onboarding?.report?.focus ?? "Connected workflow"}</p>
+              </div>
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+                <p className="text-xs text-slate-400">Estimated value</p>
+                <p className="mt-1 font-semibold text-emerald-100">{onboarding?.report?.estimatedTwoWeekHoursSaved ?? onboarding?.remaining ?? 0} hours</p>
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         <div className="grid gap-4 xl:grid-cols-2">

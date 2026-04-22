@@ -32,6 +32,7 @@ export function AnalyticsPage() {
       outcomeBill: number;
       hoursSaved: number;
       totalSavings: number;
+      payPerSuccess: number;
     };
     esg?: { carbonFootprintKgCo2e: number; badge: string };
   }>({});
@@ -53,6 +54,7 @@ export function AnalyticsPage() {
         outcomeBill: number;
         hoursSaved: number;
         totalSavings: number;
+        payPerSuccess: number;
       };
       esg: { carbonFootprintKgCo2e: number; badge: string };
     };
@@ -71,7 +73,7 @@ export function AnalyticsPage() {
             <CardTitle>Analytics & Insights</CardTitle>
             <CardDescription className="text-slate-400">Chat activity, workflow efficiency, and usage trends.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
+          <CardContent className="grid gap-4 md:grid-cols-4">
             <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
               <p className="text-xs uppercase tracking-wide text-cyan-300">Hours Saved</p>
               <p className="mt-1 text-3xl font-semibold text-cyan-100">{totalHoursSaved}h</p>
@@ -83,6 +85,15 @@ export function AnalyticsPage() {
             <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
               <p className="text-xs uppercase tracking-wide text-amber-300">Usage Alerts</p>
               <p className="mt-1 text-3xl font-semibold text-amber-100">{anomalyDays.length}</p>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-xs uppercase tracking-wide text-emerald-300">ROI Widget</p>
+              <p className="mt-1 text-xl font-semibold text-emerald-100">
+                ${(roiData.monthly?.totalSavings ?? 0).toFixed(0)}
+              </p>
+              <p className="text-xs text-slate-400">
+                Saved this month, with {roiData.monthly?.successfulTasks ?? 0} successful outcomes.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -164,6 +175,10 @@ export function AnalyticsPage() {
                 <p className="text-xl font-semibold text-cyan-100">{roiData.monthly?.successfulTasks ?? 0}</p>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+                <p className="text-xs text-slate-400">Pay-per-success</p>
+                <p className="text-xl font-semibold text-fuchsia-100">${roiData.monthly?.payPerSuccess ?? 0}</p>
+              </div>
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
                 <p className="text-xs text-slate-400">Total Savings</p>
                 <p className="text-xl font-semibold text-fuchsia-100">${roiData.monthly?.totalSavings ?? 0}</p>
               </div>
@@ -173,6 +188,9 @@ export function AnalyticsPage() {
                 <p className="text-xs text-slate-500">{roiData.esg?.carbonFootprintKgCo2e ?? 0} kg CO2e</p>
               </div>
             </div>
+            <p className="text-xs text-slate-400">
+              Outcome-based billing means the platform can charge $0 upfront and only bill on successful high-value tasks.
+            </p>
           </CardContent>
         </Card>
       </div>
