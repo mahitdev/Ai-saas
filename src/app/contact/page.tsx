@@ -13,7 +13,7 @@ export default function ContactPage() {
           <Button asChild variant="outline" className="border-slate-700 bg-slate-900/70 text-slate-200 hover:bg-slate-800">
             <Link href="/">
               <ArrowLeft className="mr-2 size-4" />
-              Back to front page
+              Back to home
             </Link>
           </Button>
         </div>
@@ -24,9 +24,9 @@ export default function ContactPage() {
               <MessageCircleHeart className="size-3.5" />
               Contact & Collaboration
             </div>
-            <CardTitle className="text-3xl text-slate-100 md:text-4xl">Let&apos;s Connect</CardTitle>
+            <CardTitle className="text-3xl text-slate-100 md:text-4xl">Need help with AI Agent?</CardTitle>
             <CardDescription className="text-slate-400">
-              For project inquiries, collaboration, feedback, or support, reach out directly by email.
+              For setup help, product questions, feedback, or support, reach out directly by email.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -43,10 +43,10 @@ export default function ContactPage() {
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-300">
-                Fast response for app feature requests.
+                Fast response for product and account questions.
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-300">
-                Help with AI chat setup and deployment issues.
+                Help with AI chat, voice, and workflow setup.
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-300">
                 Collaboration for custom UI and product upgrades.
@@ -58,4 +58,3 @@ export default function ContactPage() {
     </main>
   );
 }
-

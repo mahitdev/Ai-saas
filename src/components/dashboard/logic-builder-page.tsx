@@ -49,9 +49,9 @@ export function LogicBuilderPage() {
       <div className="mx-auto w-full max-w-5xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Logic Blocks Builder</CardTitle>
+            <CardTitle>Workflow Builder</CardTitle>
             <CardDescription className="text-slate-400">
-              Drag, reorder, and run AI workflow chains in a dedicated workspace.
+              Drag, reorder, and run multi-step AI workflows in a dedicated workspace.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">

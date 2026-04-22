@@ -57,9 +57,9 @@ export function VoiceActionsPage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Voice-to-Action Layer</CardTitle>
+            <CardTitle>Voice Actions</CardTitle>
             <CardDescription className="text-slate-400">
-              Use mobile widget or phone integration to send spoken commands to your dashboard.
+              Use the mobile widget or phone integration to send spoken commands to your dashboard.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">

@@ -95,7 +95,7 @@ const Page = () => {
           Secure account setup
         </div>
         <CardTitle>Create your account</CardTitle>
-        <CardDescription>Use your email to get started.</CardDescription>
+        <CardDescription>Use your email to start with chat, memory, tasks, and voice.</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -168,7 +168,7 @@ const Page = () => {
           <p className="text-xs text-muted-foreground">
             Want to explore first?{" "}
             <Link href="/" className="text-foreground underline underline-offset-4">
-              Go to front page
+              Go to home
             </Link>
           </p>
         </div>

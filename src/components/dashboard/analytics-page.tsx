@@ -69,7 +69,7 @@ export function AnalyticsPage() {
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
             <CardTitle>Analytics & Insights</CardTitle>
-            <CardDescription className="text-slate-400">Efficiency score, anomaly alerts, and sentiment trends.</CardDescription>
+            <CardDescription className="text-slate-400">Chat activity, workflow efficiency, and usage trends.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-3">
             <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
@@ -77,11 +77,11 @@ export function AnalyticsPage() {
               <p className="mt-1 text-3xl font-semibold text-cyan-100">{totalHoursSaved}h</p>
             </div>
             <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
-              <p className="text-xs uppercase tracking-wide text-fuchsia-300">Efficiency Score</p>
+              <p className="text-xs uppercase tracking-wide text-fuchsia-300">Workflow Score</p>
               <p className="mt-1 text-3xl font-semibold text-fuchsia-100">{Math.min(98, totalHoursSaved * 3)}%</p>
             </div>
             <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
-              <p className="text-xs uppercase tracking-wide text-amber-300">Anomaly Alerts</p>
+              <p className="text-xs uppercase tracking-wide text-amber-300">Usage Alerts</p>
               <p className="mt-1 text-3xl font-semibold text-amber-100">{anomalyDays.length}</p>
             </div>
           </CardContent>
@@ -106,7 +106,7 @@ export function AnalyticsPage() {
 
           <Card className="border-slate-700/70 bg-slate-950/80">
             <CardHeader>
-              <CardTitle>Anomaly Alerts</CardTitle>
+            <CardTitle>Usage Alerts</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {anomalyDays.length === 0 ? (
@@ -124,7 +124,7 @@ export function AnalyticsPage() {
 
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Sentiment Trends Heat Map</CardTitle>
+            <CardTitle>Conversation Trends Heat Map</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {sentimentHeat.map((row, rowIndex) => (
@@ -134,7 +134,7 @@ export function AnalyticsPage() {
                     key={`${rowIndex}-${colIndex}`}
                     className="h-10 rounded-md border border-slate-700"
                     style={{ background: `rgba(34,197,94,${Math.max(0.15, value)})` }}
-                    title={`Week ${rowIndex + 1}, Segment ${colIndex + 1}: ${Math.round(value * 100)}% happiness`}
+                    title={`Week ${rowIndex + 1}, Segment ${colIndex + 1}: ${Math.round(value * 100)}% engagement`}
                   />
                 ))}
               </div>
@@ -144,9 +144,9 @@ export function AnalyticsPage() {
 
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Outcome Pricing + ROI + ESG</CardTitle>
+            <CardTitle>Outcome Pricing + ROI</CardTitle>
             <CardDescription className="text-slate-400">
-              (Hours Saved x Hourly Rate) - Subscription Cost with outcome-based pricing.
+              Measure value from hours saved, task completion, and plan cost.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -168,7 +168,7 @@ export function AnalyticsPage() {
                 <p className="text-xl font-semibold text-fuchsia-100">${roiData.monthly?.totalSavings ?? 0}</p>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
-                <p className="text-xs text-slate-400">ESG Carbon Badge</p>
+                <p className="text-xs text-slate-400">Impact Badge</p>
                 <p className="text-xl font-semibold text-emerald-100">{roiData.esg?.badge ?? "N/A"}</p>
                 <p className="text-xs text-slate-500">{roiData.esg?.carbonFootprintKgCo2e ?? 0} kg CO2e</p>
               </div>

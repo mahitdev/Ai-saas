@@ -99,7 +99,7 @@ export function ModelLabPage() {
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
             <CardTitle>Model Lab</CardTitle>
-            <CardDescription className="text-slate-400">Fine-tune behavior, upload knowledge, and choose engine profile.</CardDescription>
+            <CardDescription className="text-slate-400">Tune behavior, upload knowledge, and choose an engine profile.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-3">

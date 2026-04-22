@@ -126,8 +126,8 @@ export function LibraryPage() {
       <div className="mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-[280px_1fr]">
         <Card className="h-fit border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Library</CardTitle>
-            <CardDescription className="text-slate-400">Collections and saved prompt assets.</CardDescription>
+            <CardTitle>Knowledge Library</CardTitle>
+            <CardDescription className="text-slate-400">Collections, saved notes, prompts, and reusable outputs.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
@@ -162,8 +162,8 @@ export function LibraryPage() {
         <div className="space-y-4">
           <Card className="border-slate-700/70 bg-slate-950/80">
             <CardHeader>
-              <CardTitle>Asset Management</CardTitle>
-              <CardDescription className="text-slate-400">Save generated outputs with AI auto-tagging.</CardDescription>
+            <CardTitle>Asset Management</CardTitle>
+            <CardDescription className="text-slate-400">Save generated outputs, notes, and prompts with auto-tagging.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Input

@@ -29,9 +29,9 @@ export function MindMapPage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Interactive Knowledge Mind Map</CardTitle>
+            <CardTitle>Context Explorer</CardTitle>
             <CardDescription className="text-slate-400">
-              Paste conversation/context text and explore topic clusters interactively.
+              Paste conversation text, notes, or transcripts and explore topic clusters interactively.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">

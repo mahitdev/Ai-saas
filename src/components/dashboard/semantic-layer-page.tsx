@@ -81,9 +81,9 @@ export function SemanticLayerPage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Multi-Tenant Semantic Layer</CardTitle>
+            <CardTitle>Semantic Layer</CardTitle>
             <CardDescription className="text-slate-400">
-              Map raw columns to business concepts so AI answers use your exact formulas.
+              Map raw values to business concepts so AI answers use your exact formulas.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-2">
@@ -118,7 +118,7 @@ export function SemanticLayerPage() {
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
             <CardTitle>Semantic Resolve</CardTitle>
-            <CardDescription className="text-slate-400">Run AI-safe metric evaluation with your formula definitions.</CardDescription>
+            <CardDescription className="text-slate-400">Run metric evaluation with your formula definitions.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <select

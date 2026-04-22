@@ -82,7 +82,7 @@ export function WeeklyDigestPage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Weekly Offline Digest</CardTitle>
+            <CardTitle>Weekly Digest</CardTitle>
             <CardDescription className="text-slate-400">
               Every Sunday, AI summarizes activity, hours saved, top topics, and next-week predictions.
             </CardDescription>

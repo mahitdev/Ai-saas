@@ -55,8 +55,8 @@ export function GlobalCommandBar() {
   }
 
   const commands: CommandItem[] = [
-    { label: "Summarize last week's tickets", action: () => setQuery("Summarize last week's tickets") },
-    { label: "Analyze budget and ROI", action: () => setQuery("Analyze budget and ROI") },
+    { label: "Summarize recent chats", action: () => setQuery("Summarize recent chats") },
+    { label: "Analyze ROI", action: () => setQuery("Analyze budget and ROI") },
     { label: "Show security alerts", action: () => setQuery("Show security alerts and pii checks") },
     { label: "Open dashboard", action: () => router.push("/dashboard") },
   ];
@@ -66,13 +66,13 @@ export function GlobalCommandBar() {
   return (
     <div className="fixed inset-0 z-[120] flex items-start justify-center bg-black/65 p-4 pt-24">
       <div className="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-950/95 p-4 shadow-2xl backdrop-blur">
-        <p className="mb-2 text-xs uppercase tracking-wide text-cyan-300">Global Command Bar</p>
+        <p className="mb-2 text-xs uppercase tracking-wide text-cyan-300">AI Agent Command Bar</p>
         <div className="flex gap-2">
           <Input
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder='Try "Summarize last week tickets"'
+            placeholder='Try "Summarize recent chats"'
             className="border-slate-700 bg-slate-900 text-slate-100"
             onKeyDown={(event) => {
               if (event.key === "Enter") {

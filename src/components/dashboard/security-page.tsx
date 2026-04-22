@@ -100,8 +100,8 @@ export function SecurityPage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Shadow AI & Security Audit</CardTitle>
-            <CardDescription className="text-slate-400">PII masking and prompt injection monitoring.</CardDescription>
+            <CardTitle>Safety & Security Audit</CardTitle>
+            <CardDescription className="text-slate-400">PII masking, prompt injection monitoring, and governance review.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button
@@ -131,7 +131,7 @@ export function SecurityPage() {
               Process in Enclave
             </Button>
             <Button variant="outline" className="border-slate-700 bg-slate-900 text-slate-200" onClick={() => void runGatewayInspection()}>
-              Inspect via AI Gateway Control Plane
+              Inspect via safety gateway
             </Button>
             <pre className="rounded-md border border-slate-700 bg-slate-900/70 p-2 text-xs text-slate-200">{maskedText || "Masked output will appear here."}</pre>
             {enclaveResult ? (

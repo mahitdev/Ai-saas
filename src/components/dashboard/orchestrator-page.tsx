@@ -95,8 +95,8 @@ export function OrchestratorPage() {
     <main className="min-h-svh bg-[linear-gradient(180deg,#020617_0%,#111827_100%)] p-4 text-slate-100 md:p-8">
       <div className="mx-auto w-full max-w-6xl space-y-6">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-100">Agent Orchestrator</h1>
-          <p className="text-sm text-slate-400">Create a clean workflow, run it, and review each handoff with the final output.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-100">Multi-Agent Orchestrator</h1>
+          <p className="text-sm text-slate-400">Create a workflow, run it, and review each handoff with the final output.</p>
         </div>
 
         <Card className="border-slate-700/70 bg-slate-950/80">
@@ -178,7 +178,7 @@ export function OrchestratorPage() {
             </Button>
 
             <Button className="h-11 w-full bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => void runWorkflow()} disabled={running}>
-              {running ? "Running..." : "Run Agent Squad"}
+              {running ? "Running..." : "Run Agent Workflow"}
             </Button>
             {pendingAgent ? (
               <Button

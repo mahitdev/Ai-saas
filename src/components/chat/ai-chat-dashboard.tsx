@@ -411,7 +411,7 @@ export function AiChatDashboard({ user }: { user: User }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         taskId: message.id,
-        question: "Why did I say this?",
+        question: "Why this answer?",
         answer: message.content,
         reasoning: "Response was generated from recent chat history, memory summary, and active model routing strategy.",
         sources: sourceLinks,
@@ -441,7 +441,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                 <p className="truncate text-sm text-slate-400">{user.email}</p>
               </div>
             </div>
-            <CardDescription className="text-slate-400">Your AI memory chat space.</CardDescription>
+            <CardDescription className="text-slate-400">Chat, memory, voice, and task capture in one secure space.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button className="w-full bg-cyan-500/15 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.28)] hover:bg-cyan-500/25" onClick={() => void createConversation()}>
@@ -508,7 +508,7 @@ export function AiChatDashboard({ user }: { user: User }) {
               >
                 <a href="/dashboard/ubiquity">
                   <Sparkles className="mr-2 size-4" />
-                  Ubiquity Layer
+                  Ubiquity
                 </a>
               </Button>
               <Button
@@ -648,7 +648,7 @@ export function AiChatDashboard({ user }: { user: User }) {
               >
                 <a href="/dashboard/compliance">
                   <Cpu className="mr-2 size-4" />
-                  Compliance & ESG
+                  Compliance & Safety
                 </a>
               </Button>
               <Button
@@ -967,7 +967,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                             className="mt-2 text-[11px] text-indigo-200 underline decoration-dotted underline-offset-2"
                             onClick={() => void explainAssistantMessage(message)}
                           >
-                            Why did I say this?
+                            Why this answer?
                           </button>
                         ) : null}
                       </div>

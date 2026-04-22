@@ -152,8 +152,8 @@ export function GrowthControlPage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Growth & Trust Control Center</CardTitle>
-            <CardDescription className="text-slate-400">Retention, monetization, governance, community, and technical routing in one backend-powered workspace.</CardDescription>
+            <CardTitle>Growth, Trust & Governance</CardTitle>
+            <CardDescription className="text-slate-400">Retention, monetization, governance, prompt routing, and marketplace tools in one workspace.</CardDescription>
           </CardHeader>
           <CardContent><p className="text-xs text-slate-400">{status}</p></CardContent>
         </Card>
@@ -205,7 +205,7 @@ export function GrowthControlPage() {
           </Card>
 
           <Card className="border-slate-700 bg-slate-950/80">
-            <CardHeader><CardTitle>Community + Technical Layer</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Marketplace + Technical Layer</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <Button className="bg-fuchsia-500/15 text-fuchsia-100 hover:bg-fuchsia-500/25" onClick={() => void createMarketplacePrompt()}>Publish Prompt to Marketplace</Button>
               <p className="text-xs text-slate-400">Export watermark endpoint active at <code>/api/exports/generate</code> with signup discount link.</p>

@@ -14,7 +14,7 @@ export function DeveloperPage() {
   const [sandboxRequest, setSandboxRequest] = useState('{ "prompt": "Hello API" }');
   const [sandboxResponse, setSandboxResponse] = useState("");
   const [logs, setLogs] = useState<WebhookLog[]>([]);
-  const [status, setStatus] = useState("Loading developer workspace...");
+  const [status, setStatus] = useState("Loading developer tools...");
   const [burnForecast, setBurnForecast] = useState<{
     daysUntilExhausted: number;
     dailyRate: number;
@@ -52,7 +52,7 @@ export function DeveloperPage() {
         setBurnForecast(payload.forecast);
       }
 
-      setStatus("Developer workspace synced.");
+      setStatus("Developer tools synced.");
     }
 
     void loadInitial();
@@ -151,7 +151,7 @@ export function DeveloperPage() {
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
             <CardTitle>API & Developer</CardTitle>
-            <CardDescription className="text-slate-400">Keys, webhooks, and sandbox testing.</CardDescription>
+            <CardDescription className="text-slate-400">Keys, webhooks, sandbox testing, and usage forecasting.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-slate-300">Total usage limit: {totalLimit.toLocaleString()} credits</p>
@@ -230,7 +230,7 @@ export function DeveloperPage() {
 
           <Card className="border-slate-700/70 bg-slate-950/80">
             <CardHeader>
-              <CardTitle>Smart Routing + Burn Rate</CardTitle>
+            <CardTitle>Smart Routing + Usage Forecast</CardTitle>
               <CardDescription className="text-slate-400">
                 Simple tasks route to fast models, complex tasks to deep reasoning models.
               </CardDescription>

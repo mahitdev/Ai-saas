@@ -34,9 +34,9 @@ type SectionSnapshot = {
 const sections: SectionSnapshot[] = [
   {
     eyebrow: "Cinematic control",
-    title: "A calm command center for focused work.",
+    title: "A calm command center for chat, memory, tasks, and automation.",
     description:
-      "AI Agent turns planning, tracking, and execution into a single immersive workspace that feels like a premium product journey.",
+      "AI Agent keeps conversations, context, actions, and safeguards together in one immersive workspace that feels premium without getting noisy.",
   },
   {
     eyebrow: "Interactive depth",
@@ -52,33 +52,33 @@ const sections: SectionSnapshot[] = [
   },
   {
     eyebrow: "Ready to launch",
-    title: "A premium landing flow designed to convert.",
+    title: "Always-on assistant, ready when you are.",
     description:
       "Everything stays lightweight, responsive, and cinematic across desktop and mobile screens.",
   },
 ];
 
 const heroStats = [
-  { label: "Focus blocks", value: "12" },
-  { label: "Streak", value: "28 days" },
-  { label: "Completion", value: "94%" },
+  { label: "Conversations", value: "128" },
+  { label: "Actions taken", value: "42" },
+  { label: "Trust score", value: "94%" },
 ];
 
 const featureCards = [
   {
     icon: TimerReset,
-    title: "Deep sessions",
-    description: "Protect time blocks with a dashboard that stays uncluttered and calm.",
+    title: "Chat continuity",
+    description: "Keep long conversations attached to the right thread with memory-first navigation.",
   },
   {
     icon: TrendingUp,
-    title: "Momentum tracking",
-    description: "See consistency build over time through elegant progress surfaces.",
+    title: "Workflow automation",
+    description: "Watch tasks, requests, and follow-ups progress through the workspace.",
   },
   {
     icon: Shield,
-    title: "Distraction shield",
-    description: "Keep the interface focused on the few signals that matter most.",
+    title: "Trusted by default",
+    description: "Auth, security, and governance stay visible without overwhelming the interface.",
   },
 ];
 
@@ -266,7 +266,7 @@ function SectionFrame({
           <div className="flex flex-wrap gap-3">
             <ThreeDButton asChild className="min-w-[180px] bg-cyan-400/15 text-cyan-50 hover:bg-cyan-400/20">
               <Link href="/auth/sign-up">
-                Start Tracking
+                Start Chatting
                 <ArrowRight className="size-4" />
               </Link>
             </ThreeDButton>
@@ -377,7 +377,7 @@ export function AiAgentLanding() {
             </div>
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.34em] text-white/85">AI Agent</p>
-              <p className="text-xs text-white/50">Cinematic productivity workspace</p>
+              <p className="text-xs text-white/50">Cinematic AI workspace</p>
             </div>
           </div>
           <div className="pointer-events-auto hidden items-center gap-3 sm:flex">
@@ -389,7 +389,7 @@ export function AiAgentLanding() {
             </Link>
             <ThreeDButton asChild className="px-5 py-3">
               <Link href="/auth/sign-up">
-                Start Tracking
+                Start Chatting
                 <ArrowRight className="size-4" />
               </Link>
             </ThreeDButton>
@@ -414,26 +414,26 @@ export function AiAgentLanding() {
                   <TiltCard className="min-h-[210px] border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04))] p-5">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-white/45">Current session</p>
-                        <p className="mt-4 text-6xl font-semibold tracking-[-0.08em] text-white">27:14</p>
+                        <p className="text-xs uppercase tracking-[0.3em] text-white/45">Active chat</p>
+                        <p className="mt-4 text-5xl font-semibold tracking-[-0.08em] text-white">AI Agent</p>
                       </div>
                       <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-right">
-                        <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-100/70">Streak</p>
-                        <p className="text-lg font-semibold text-cyan-50">28</p>
+                        <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-100/70">Memory</p>
+                        <p className="text-lg font-semibold text-cyan-50">Live</p>
                       </div>
                     </div>
                     <div className="mt-7 flex items-center gap-3">
                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
                         <div className="h-full w-[78%] rounded-full bg-[linear-gradient(90deg,#67e8f9_0%,#8b5cf6_100%)] shadow-[0_0_18px_rgba(103,232,249,0.45)]" />
                       </div>
-                      <p className="text-xs text-white/50">78%</p>
+                      <p className="text-xs text-white/50">Context ready</p>
                     </div>
                   </TiltCard>
 
                   <div className="grid gap-4">
                     <TiltCard className="border-white/12 bg-white/[0.04] p-4">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs uppercase tracking-[0.26em] text-white/50">Progress ring</p>
+                        <p className="text-xs uppercase tracking-[0.26em] text-white/50">Activity ring</p>
                         <BarChart3 className="size-4 text-cyan-200/80" />
                       </div>
                       <div className="relative mx-auto mt-4 grid size-36 place-items-center">
@@ -459,7 +459,7 @@ export function AiAgentLanding() {
                         </svg>
                         <div className="absolute text-center">
                           <p className="text-3xl font-semibold text-white">78%</p>
-                          <p className="text-xs uppercase tracking-[0.24em] text-white/45">done</p>
+                          <p className="text-xs uppercase tracking-[0.24em] text-white/45">synced</p>
                         </div>
                       </div>
                     </TiltCard>
@@ -467,10 +467,10 @@ export function AiAgentLanding() {
                     <TiltCard className="border-white/12 bg-white/[0.04] p-4">
                       <div className="flex items-center gap-2">
                         <div className="size-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.85)]" />
-                        <p className="text-sm font-medium text-white/90">Live focus mode</p>
+                        <p className="text-sm font-medium text-white/90">Live agent mode</p>
                       </div>
                       <p className="mt-2 text-sm leading-6 text-white/60">
-                        A cinematic workspace with the right level of structure and calm.
+                        A cinematic workspace with the right level of structure for conversation, memory, and action.
                       </p>
                     </TiltCard>
                   </div>
@@ -488,15 +488,15 @@ export function AiAgentLanding() {
             </div>
 
             <div className="pointer-events-none absolute -left-8 top-10 hidden w-44 animate-float-slow rounded-[2rem] border border-white/10 bg-white/[0.045] p-4 shadow-[0_16px_80px_rgba(0,0,0,0.4)] backdrop-blur-2xl lg:block">
-              <p className="text-xs uppercase tracking-[0.22em] text-white/45">Focus score</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-white/45">Memory depth</p>
               <p className="mt-3 text-3xl font-semibold text-white">92</p>
-              <p className="mt-1 text-sm text-white/55">strong start today</p>
+              <p className="mt-1 text-sm text-white/55">strong recall across chats</p>
             </div>
 
             <div className="pointer-events-none absolute -right-6 bottom-12 hidden w-40 animate-float-mid rounded-[2rem] border border-white/10 bg-white/[0.045] p-4 shadow-[0_16px_80px_rgba(0,0,0,0.4)] backdrop-blur-2xl lg:block">
-              <p className="text-xs uppercase tracking-[0.22em] text-white/45">Consistency</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-white/45">Task flow</p>
               <p className="mt-3 text-3xl font-semibold text-white">14d</p>
-              <p className="mt-1 text-sm text-white/55">steady streak locked</p>
+              <p className="mt-1 text-sm text-white/55">steady action pipeline</p>
             </div>
           </div>
         </SectionFrame>
@@ -515,12 +515,12 @@ export function AiAgentLanding() {
                 Cards, panels, and controls layered like a real 3D scene.
               </h2>
               <p className="max-w-2xl text-pretty text-base leading-7 text-white/68 sm:text-lg">
-                Every hover adds lift and glow, giving the interface the physical presence of a premium product launch.
+                Every hover adds lift and glow, giving the interface the physical presence of a premium AI workspace.
               </p>
               <div className="flex flex-wrap gap-3">
                 <ThreeDButton asChild className="min-w-[180px] bg-indigo-400/15 text-indigo-50 hover:bg-indigo-400/20">
                   <Link href="/auth/sign-up">
-                    Launch workspace
+                    Open workspace
                     <ArrowRight className="size-4" />
                   </Link>
                 </ThreeDButton>
@@ -557,11 +557,11 @@ export function AiAgentLanding() {
                   </div>
                 </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  {["Timer", "Tasks", "Momentum"].map((item, index) => (
+                  {["Chat", "Tasks", "Memory"].map((item, index) => (
                     <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                       <p className="text-xs uppercase tracking-[0.22em] text-white/45">{item}</p>
                       <p className="mt-2 text-sm text-white/75">
-                        {index === 0 ? "Always visible" : index === 1 ? "Organized and calm" : "Always moving"}
+                        {index === 0 ? "Conversation context" : index === 1 ? "Open tasks" : "Adaptive routing"}
                       </p>
                     </div>
                   ))}
@@ -608,7 +608,7 @@ export function AiAgentLanding() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-[0.28em] text-white/45">Performance chart</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">Weekly rhythm</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">Usage trend</p>
                   </div>
                   <BarChart3 className="size-5 text-cyan-200" />
                 </div>
@@ -664,7 +664,7 @@ export function AiAgentLanding() {
                 <div className="grid gap-3">
                   {[
                     "Forecast confidence rises as activity becomes more consistent.",
-                    "Momentum bars compress and expand with each weekly cycle.",
+                    "Activity bars compress and expand with each weekly cycle.",
                     "Soft overlays keep the data readable in a dark cinematic frame.",
                   ].map((line) => (
                     <div key={line} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-white/65">
@@ -686,7 +686,7 @@ export function AiAgentLanding() {
                 Final scene
               </div>
               <h2 className="max-w-3xl text-balance text-4xl font-semibold tracking-[-0.06em] text-white sm:text-5xl lg:text-6xl">
-                A premium finish that feels like a high-end product launch.
+                A premium finish that feels like a high-end AI assistant experience.
               </h2>
               <p className="max-w-2xl text-pretty text-base leading-7 text-white/68 sm:text-lg">
                 The layout stays balanced and responsive while the motion, glow, and depth make the experience feel cinematic.
@@ -712,11 +712,11 @@ export function AiAgentLanding() {
               <div className="absolute inset-0 rounded-[1.75rem] bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.22),transparent_28%),linear-gradient(135deg,rgba(103,232,249,0.14),transparent_45%,rgba(129,140,248,0.16))]" />
               <div className="relative z-10 grid h-full gap-4 sm:grid-cols-[0.95fr_1.05fr]">
                 <div className="rounded-[1.4rem] border border-white/12 bg-white/[0.05] p-5">
-                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">Work rhythm</p>
-                  <p className="mt-3 text-4xl font-semibold text-white">Focus, ship, repeat.</p>
-                  <p className="mt-3 text-sm leading-6 text-white/60">
-                    A single motion-rich surface that keeps the story coherent from first scroll to final CTA.
-                  </p>
+                    <p className="text-xs uppercase tracking-[0.28em] text-white/45">Assistant loop</p>
+                    <p className="mt-3 text-4xl font-semibold text-white">Chat, summarize, execute.</p>
+                    <p className="mt-3 text-sm leading-6 text-white/60">
+                      A single motion-rich surface that keeps the story coherent from first scroll to final CTA.
+                    </p>
                 </div>
                 <div className="grid gap-4">
                   <div className="rounded-[1.4rem] border border-white/12 bg-white/[0.05] p-5">

@@ -45,7 +45,7 @@ export function ComparisonPage() {
           <CardHeader>
             <CardTitle>Side-by-Side Model Comparison</CardTitle>
             <CardDescription className="text-slate-400">
-              Run one prompt across two models and compare answers cleanly.
+              Run one prompt across two models and compare the responses side by side.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -84,7 +84,7 @@ export function ComparisonPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="border-slate-700/70 bg-slate-950/80">
             <CardHeader>
-              <CardTitle>Left Output</CardTitle>
+              <CardTitle>Model A Output</CardTitle>
             </CardHeader>
             <CardContent>
               <pre className="min-h-56 overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-200">
@@ -94,7 +94,7 @@ export function ComparisonPage() {
           </Card>
           <Card className="border-slate-700/70 bg-slate-950/80">
             <CardHeader>
-              <CardTitle>Right Output</CardTitle>
+              <CardTitle>Model B Output</CardTitle>
             </CardHeader>
             <CardContent>
               <pre className="min-h-56 overflow-auto rounded-md border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-200">

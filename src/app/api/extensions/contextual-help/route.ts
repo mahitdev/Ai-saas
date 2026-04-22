@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   let suggestion = "Summarize this page and extract actions.";
   if (url.includes("linkedin.com") || /linkedin/.test(title)) {
-    suggestion = "I can draft a personalized LinkedIn outreach message based on this profile.";
+    suggestion = "I can summarize this profile and draft a follow-up message.";
   } else if (/github|pull request|issue/.test(url + " " + title)) {
     suggestion = "I can generate a code review summary and a suggested patch plan.";
   } else if (/invoice|budget|finance|pricing/.test(url + " " + title + " " + highlighted.toLowerCase())) {

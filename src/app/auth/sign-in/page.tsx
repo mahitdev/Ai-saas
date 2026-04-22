@@ -116,7 +116,7 @@ const Page = () => {
           Protected sign in
         </div>
         <CardTitle className="text-2xl tracking-tight">Welcome back</CardTitle>
-        <CardDescription>Sign in with your email and password.</CardDescription>
+        <CardDescription>Sign in to continue chats, memory, tasks, and voice workflows.</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -179,7 +179,7 @@ const Page = () => {
               />
               Remember this device
             </label>
-            <span className="text-xs text-muted-foreground">Secure, encrypted login</span>
+            <span className="text-xs text-muted-foreground">Secure, encrypted access</span>
           </div>
 
           <Button
@@ -194,7 +194,7 @@ const Page = () => {
             <div className="rounded-lg border border-border/60 bg-muted/30 p-2 text-xs text-muted-foreground">
               <p className="mb-1 flex items-center gap-1.5 font-medium text-foreground">
                 <Sparkles className="size-3.5 text-cyan-500" />
-                Smart Memory
+                Conversation Memory
               </p>
               Continue where you left off.
             </div>
@@ -203,7 +203,7 @@ const Page = () => {
                 <Zap className="size-3.5 text-fuchsia-500" />
                 Voice + Chat
               </p>
-              Talk naturally with your AI.
+              Talk naturally with AI Agent.
             </div>
           </div>
         </form>
@@ -223,7 +223,7 @@ const Page = () => {
           <p className="text-xs text-muted-foreground">
             Want to explore first?{" "}
             <Link href="/" className="text-foreground underline underline-offset-4">
-              Go to front page
+              Go to home
             </Link>
           </p>
         </div>

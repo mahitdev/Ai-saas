@@ -14,13 +14,13 @@ export function UbiquityPage() {
   const [mcpTarget, setMcpTarget] = useState("");
   const [mcpResult, setMcpResult] = useState<string>("");
   const [botPlatform, setBotPlatform] = useState<BotPlatform>("slack");
-  const [botMessage, setBotMessage] = useState("@AI Agent summarize this sprint thread");
+  const [botMessage, setBotMessage] = useState("@AI Agent summarize this chat thread");
   const [botReply, setBotReply] = useState("");
   const [command, setCommand] = useState("");
   const [commandOutput, setCommandOutput] = useState("");
-  const [pageTitle, setPageTitle] = useState("LinkedIn - Product Manager Profile");
-  const [pageUrl, setPageUrl] = useState("https://www.linkedin.com/in/example-profile");
-  const [highlightedText, setHighlightedText] = useState("Growth-focused PM with 7 years of SaaS experience.");
+  const [pageTitle, setPageTitle] = useState("AI Agent dashboard");
+  const [pageUrl, setPageUrl] = useState("https://app.example.com/dashboard/chat");
+  const [highlightedText, setHighlightedText] = useState("Summarize this conversation and capture the next action items.");
   const [contextHelp, setContextHelp] = useState("");
 
   const quickCommands = useMemo(
@@ -95,9 +95,9 @@ export function UbiquityPage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>The Ubiquity Layer</CardTitle>
+            <CardTitle>AI Agent Everywhere</CardTitle>
             <CardDescription className="text-slate-400">
-              Entry points across browser, desktop, IDE, and team chat so users can trigger AI anywhere.
+              Entry points across browser, desktop, IDE, and team chat so users can trigger AI Agent anywhere.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -107,7 +107,7 @@ export function UbiquityPage() {
             <CardHeader>
               <CardTitle>Chrome/Edge Extension</CardTitle>
               <CardDescription className="text-slate-400">
-                Highlight text on any site and send it to your app for analysis.
+                Highlight text on any site and send it to AI Agent for analysis.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-slate-300">

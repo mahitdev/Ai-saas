@@ -855,7 +855,7 @@ export function SecuredDashboard({ user }: { user: User }) {
               </div>
             </div>
             <CardDescription className="pt-2">
-              Secure workspace powered by authenticated APIs.
+              Secure workspace for chats, tasks, and projects.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1099,7 +1099,7 @@ export function SecuredDashboard({ user }: { user: User }) {
                         disabled={creatingTask}
                         onClick={() => runAssistantPack("launch")}
                       >
-                        Launch Pack
+                        Release Pack
                       </Button>
                       <Button
                         type="button"
@@ -1117,7 +1117,7 @@ export function SecuredDashboard({ user }: { user: User }) {
                         disabled={creatingTask}
                         onClick={() => runAssistantPack("bugfix")}
                       >
-                        Bugfix Pack
+                        Repair Pack
                       </Button>
                     </div>
                   </div>
@@ -1431,7 +1431,7 @@ export function SecuredDashboard({ user }: { user: User }) {
           <Card className="border-slate-200/80 bg-white/90">
             <CardHeader>
               <CardTitle className="text-base">Activity Timeline</CardTitle>
-              <CardDescription>Recent actions in your workspace.</CardDescription>
+              <CardDescription>Recent actions across projects and tasks.</CardDescription>
             </CardHeader>
             <CardContent>
               {activities.length === 0 ? (

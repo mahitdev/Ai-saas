@@ -35,8 +35,8 @@ export function CompliancePage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Compliance & ESG Reporting</CardTitle>
-            <CardDescription className="text-slate-400">Audit trail export and sustainability insights.</CardDescription>
+            <CardTitle>Compliance & Safety Reporting</CardTitle>
+            <CardDescription className="text-slate-400">Audit trail export, policy review, and usage insight.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             <Button className="bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25" onClick={() => void loadReport()} disabled={loading}>
@@ -60,13 +60,13 @@ export function CompliancePage() {
                 <CardContent><p className="text-3xl font-semibold text-fuchsia-100">{report.summary.estimatedTokens.toLocaleString()}</p></CardContent>
               </Card>
               <Card className="border-slate-700/70 bg-slate-950/80">
-                <CardHeader><CardTitle className="text-base">Energy Impact Badge</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base">Impact Badge</CardTitle></CardHeader>
                 <CardContent><p className="text-2xl font-semibold text-emerald-100">{report.summary.energyImpactBadge}</p></CardContent>
               </Card>
             </div>
 
             <Card className="border-slate-700/70 bg-slate-950/80">
-              <CardHeader><CardTitle>Recent AI Decisions</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Recent AI Decisions</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {report.entries.slice(0, 20).map((entry) => (
                   <div key={entry.id} className="rounded-md border border-slate-700 bg-slate-900/70 p-2 text-sm text-slate-200">
@@ -82,4 +82,3 @@ export function CompliancePage() {
     </main>
   );
 }
-

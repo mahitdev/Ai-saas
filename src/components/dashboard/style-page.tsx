@@ -40,7 +40,7 @@ export function StylePage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>Style & Brand Voice Tuner</CardTitle>
+            <CardTitle>Style & Voice Tuner</CardTitle>
             <CardDescription className="text-slate-400">Upload writing samples and score generated text consistency.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-2">
@@ -103,4 +103,3 @@ export function StylePage() {
     </main>
   );
 }
-
