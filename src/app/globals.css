@@ -48,8 +48,8 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -122,11 +122,14 @@
   body {
     @apply bg-background text-foreground;
     color-scheme: dark;
+    min-height: 100vh;
     background:
-      radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 28%),
-      radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.12), transparent 24%),
-      #020617;
+      radial-gradient(circle at 20% 12%, rgba(59, 130, 246, 0.14), transparent 22%),
+      radial-gradient(circle at 80% 14%, rgba(139, 92, 246, 0.16), transparent 22%),
+      radial-gradient(circle at 50% 90%, rgba(6, 182, 212, 0.08), transparent 24%),
+      linear-gradient(180deg, #02040c 0%, #040814 54%, #02040c 100%);
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
 
   ::selection {
@@ -167,6 +170,35 @@
   }
 }
 
+@keyframes slowPan {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(18px, -14px, 0) scale(1.06);
+  }
+}
+
+@keyframes softRotate {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+
+@keyframes grainShift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-8%, -8%, 0);
+  }
+}
+
 @keyframes marqueeX {
   0% {
     transform: translateX(0);
@@ -203,5 +235,82 @@
     background: rgba(2, 6, 23, 0.7);
     box-shadow: 0 20px 80px rgba(2, 6, 23, 0.35);
     backdrop-filter: blur(24px);
+  }
+
+  .glow-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(18px);
+    opacity: 0.55;
+    mix-blend-mode: screen;
+    pointer-events: none;
+  }
+
+  .glow-orb-left {
+    left: -10vw;
+    top: 16vh;
+    width: 32vw;
+    height: 32vw;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.34), rgba(59, 130, 246, 0.02) 72%);
+    animation: slowPan 18s ease-in-out infinite;
+  }
+
+  .glow-orb-right {
+    right: -8vw;
+    top: 8vh;
+    width: 26vw;
+    height: 26vw;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.36), rgba(139, 92, 246, 0.01) 72%);
+    animation: softRotate 16s ease-in-out infinite;
+  }
+
+  .landing-panel {
+    transform:
+      perspective(1200px)
+      rotateX(var(--tilt-x, 0deg))
+      rotateY(var(--tilt-y, 0deg))
+      translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0);
+    transition: transform 160ms ease-out, box-shadow 240ms ease-out;
+  }
+
+  .landing-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      radial-gradient(circle at 50% 10%, rgba(255, 255, 255, var(--glow-opacity, 0.55)), transparent 24%),
+      linear-gradient(135deg, rgba(103, 232, 249, 0.16), transparent 45%, rgba(129, 140, 248, 0.12));
+    opacity: 0.75;
+    pointer-events: none;
+  }
+
+  .panel-reflection {
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.26), transparent 24%),
+      linear-gradient(315deg, transparent 45%, rgba(255, 255, 255, 0.08) 55%, transparent 68%);
+    mix-blend-mode: screen;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .landing-panel > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .landing-panel::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(103, 232, 249, 0.5), rgba(129, 140, 248, 0.16), rgba(255, 255, 255, 0.06));
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.55;
   }
 }
