@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 const weeklyHours = [2, 3, 4, 5, 6, 7, 8];
@@ -18,6 +18,40 @@ const sentimentHeat = [
   [0.61, 0.67, 0.72, 0.79],
 ];
 
+type LiveAnalysisSnapshot = {
+  generatedAt: string;
+  systemStatus: "healthy" | "busy" | "needs_attention";
+  confidence: number;
+  metrics: {
+    conversations: number;
+    messages24h: number;
+    assistantMessages24h: number;
+    tasksTotal: number;
+    tasksOpen: number;
+    tasksDone: number;
+    overdueTasks: number;
+    promptInjectionAlerts: number;
+  };
+  recommendation: string;
+  highlights: string[];
+  source: "database" | "fallback_memory";
+};
+
+type SystemAgentRun = {
+  analysis: LiveAnalysisSnapshot;
+  activeProject: { id: string; name: string } | null;
+  actionPlan: string[];
+  executedTask?: { id: string; title: string; description: string | null; projectId: string } | null;
+  systemAgent?: { identity: string; scope: string; goal: string };
+  executed?: boolean;
+};
+
+function formatStatus(status: LiveAnalysisSnapshot["systemStatus"]) {
+  if (status === "needs_attention") return "Needs attention";
+  if (status === "busy") return "Busy";
+  return "Healthy";
+}
+
 export function AnalyticsPage() {
   const totalHoursSaved = useMemo(() => weeklyHours.reduce((sum, value) => sum + value, 0), []);
   const anomalyDays = tokenUsage
@@ -26,6 +60,12 @@ export function AnalyticsPage() {
   const [hourlyRate, setHourlyRate] = useState("35");
   const [subscriptionCost, setSubscriptionCost] = useState("49");
   const [taskPrice, setTaskPrice] = useState("1");
+  const [systemGoal, setSystemGoal] = useState("Review live workspace activity and create the next best follow-up.");
+  const [systemRun, setSystemRun] = useState<SystemAgentRun | null>(null);
+  const [systemAgentBusy, setSystemAgentBusy] = useState(false);
+  const [systemAgentError, setSystemAgentError] = useState<string | null>(null);
+  const [streamState, setStreamState] = useState<"connecting" | "live" | "offline">("connecting");
+  const [liveAnalysis, setLiveAnalysis] = useState<LiveAnalysisSnapshot | null>(null);
   const [roiData, setRoiData] = useState<{
     monthly?: {
       successfulTasks: number;
@@ -65,9 +105,160 @@ export function AnalyticsPage() {
     void loadRoi();
   }, [loadRoi]);
 
+  useEffect(() => {
+    const source = new EventSource("/api/realtime/analysis");
+    setStreamState("connecting");
+
+    source.onopen = () => {
+      setStreamState("live");
+    };
+
+    source.onmessage = (event) => {
+      try {
+        setLiveAnalysis(JSON.parse(event.data) as LiveAnalysisSnapshot);
+      } catch {
+        setLiveAnalysis(null);
+      }
+    };
+
+    source.onerror = () => {
+      setStreamState("offline");
+    };
+
+    return () => {
+      source.close();
+    };
+  }, []);
+
+  async function runSystemAgent(execute = false) {
+    setSystemAgentBusy(true);
+    setSystemAgentError(null);
+
+    try {
+      const response = await fetch("/api/system-agent", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ goal: systemGoal, execute }),
+      });
+      const payload = (await response.json()) as SystemAgentRun & { error?: string };
+      if (!response.ok) {
+        setSystemRun(null);
+        setSystemAgentError(payload.error ?? "System agent request failed.");
+        return;
+      }
+      setSystemRun(payload);
+    } catch {
+      setSystemAgentError("System agent is unavailable right now.");
+      setSystemRun(null);
+    } finally {
+      setSystemAgentBusy(false);
+    }
+  }
+
+  const liveStatus = liveAnalysis ? formatStatus(liveAnalysis.systemStatus) : streamState;
+  const liveUpdatedAt = liveAnalysis
+    ? new Date(liveAnalysis.generatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : "Waiting";
+
   return (
     <main className="min-h-svh bg-[linear-gradient(180deg,#020617_0%,#111827_100%)] p-4 text-slate-100 md:p-8">
       <div className="mx-auto w-full max-w-7xl space-y-4">
+        <Card className="border-slate-700/70 bg-slate-950/80">
+          <CardHeader>
+            <CardTitle>Real-Time Analysis</CardTitle>
+            <CardDescription className="text-slate-400">
+              Streaming workspace telemetry that updates every few seconds from live app data.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-4">
+            <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-xs uppercase tracking-wide text-cyan-300">Status</p>
+              <p className="mt-1 text-xl font-semibold text-cyan-100">{liveStatus}</p>
+              <p className="mt-1 text-xs text-slate-500">Updated {liveUpdatedAt}</p>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-xs uppercase tracking-wide text-fuchsia-300">Open tasks</p>
+              <p className="mt-1 text-xl font-semibold text-fuchsia-100">{liveAnalysis?.metrics.tasksOpen ?? 0}</p>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-xs uppercase tracking-wide text-amber-300">Alerts</p>
+              <p className="mt-1 text-xl font-semibold text-amber-100">{liveAnalysis?.metrics.promptInjectionAlerts ?? 0}</p>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-xs uppercase tracking-wide text-emerald-300">Confidence</p>
+              <p className="mt-1 text-xl font-semibold text-emerald-100">{liveAnalysis?.confidence ?? 0}%</p>
+            </div>
+            <div className="md:col-span-4 rounded-md border border-slate-700 bg-slate-900/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Recommendation</p>
+              <p className="mt-2 text-sm text-slate-200">
+                {liveAnalysis?.recommendation ?? "Waiting for the live stream..."}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(liveAnalysis?.highlights ?? []).slice(0, 4).map((item) => (
+                  <span key={item} className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-700/70 bg-slate-950/80">
+          <CardHeader>
+            <CardTitle>System Agent</CardTitle>
+            <CardDescription className="text-slate-400">
+              This agent reads live workspace data and can create the next follow-up task in your latest project.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Input
+              value={systemGoal}
+              onChange={(event) => setSystemGoal(event.target.value)}
+              className="border-slate-700 bg-slate-900 text-slate-100"
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                className="bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25"
+                onClick={() => void runSystemAgent(false)}
+                disabled={systemAgentBusy}
+              >
+                {systemAgentBusy && !systemRun ? "Running..." : "Analyze System"}
+              </Button>
+              <Button
+                className="bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
+                onClick={() => void runSystemAgent(true)}
+                disabled={systemAgentBusy}
+              >
+                {systemAgentBusy && systemRun ? "Applying..." : "Analyze + Create Task"}
+              </Button>
+            </div>
+            {systemAgentError ? <p className="text-sm text-red-300">{systemAgentError}</p> : null}
+            {systemRun ? (
+              <div className="space-y-2 rounded-md border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-300">
+                <p className="text-xs uppercase tracking-wide text-cyan-300">
+                  {systemRun.systemAgent?.identity ?? "system-agent"}
+                </p>
+                <p>{systemRun.analysis.recommendation}</p>
+                <div className="flex flex-wrap gap-2">
+                  {systemRun.actionPlan.map((item) => (
+                    <span key={item} className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+                {systemRun.executedTask ? (
+                  <p className="text-emerald-200">
+                    Created task: {systemRun.executedTask.title} in project {systemRun.activeProject?.name ?? systemRun.executedTask.projectId}
+                  </p>
+                ) : (
+                  <p className="text-slate-400">No task created yet. Run with "Analyze + Create Task" to apply the result.</p>
+                )}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
             <CardTitle>Analytics & Insights</CardTitle>
@@ -88,12 +279,31 @@ export function AnalyticsPage() {
             </div>
             <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3">
               <p className="text-xs uppercase tracking-wide text-emerald-300">ROI Widget</p>
-              <p className="mt-1 text-xl font-semibold text-emerald-100">
-                ${(roiData.monthly?.totalSavings ?? 0).toFixed(0)}
-              </p>
+              <p className="mt-1 text-xl font-semibold text-emerald-100">${(roiData.monthly?.totalSavings ?? 0).toFixed(0)}</p>
               <p className="text-xs text-slate-400">
                 Saved this month, with {roiData.monthly?.successfulTasks ?? 0} successful outcomes.
               </p>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/70 p-3 md:col-span-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Live Workspace Snapshot</p>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div>
+                  <p className="text-xs text-slate-500">Conversations</p>
+                  <p className="text-2xl font-semibold text-slate-100">{liveAnalysis?.metrics.conversations ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Messages / 24h</p>
+                  <p className="text-2xl font-semibold text-slate-100">{liveAnalysis?.metrics.messages24h ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Assistant replies / 24h</p>
+                  <p className="text-2xl font-semibold text-slate-100">{liveAnalysis?.metrics.assistantMessages24h ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Tasks complete</p>
+                  <p className="text-2xl font-semibold text-slate-100">{liveAnalysis?.metrics.tasksDone ?? 0}</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -117,7 +327,7 @@ export function AnalyticsPage() {
 
           <Card className="border-slate-700/70 bg-slate-950/80">
             <CardHeader>
-            <CardTitle>Usage Alerts</CardTitle>
+              <CardTitle>Usage Alerts</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {anomalyDays.length === 0 ? (
