@@ -28,8 +28,16 @@ export function GlobalCommandBar() {
       }
     }
 
+    function openCommandBar() {
+      setOpen(true);
+    }
+
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("open-global-command-bar", openCommandBar);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("open-global-command-bar", openCommandBar);
+    };
   }, []);
 
   async function executeQuery() {

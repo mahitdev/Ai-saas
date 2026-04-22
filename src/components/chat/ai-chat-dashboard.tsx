@@ -9,12 +9,14 @@ import {
   CameraOff,
   Contact,
   Cpu,
+  Command,
   ImagePlus,
   Loader2,
   Monitor,
   Mic,
   MicOff,
   Moon,
+  MoreHorizontal,
   Plus,
   Send,
   Settings,
@@ -34,6 +36,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -427,502 +439,157 @@ export function AiChatDashboard({ user }: { user: User }) {
   }
 
   return (
-    <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.2),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#111827_100%)] p-4 text-slate-100 md:p-8">
-      <div className="mx-auto grid w-full max-w-[1700px] gap-6 lg:grid-cols-[320px_minmax(0,1fr)] xl:gap-8">
-        <Card className="h-fit border-slate-700/70 bg-slate-950/80 text-slate-100 backdrop-blur">
+    <main className="min-h-svh bg-neutral-50 p-4 text-zinc-950 md:p-6">
+      <div className="mx-auto grid w-full max-w-[1700px] gap-6 lg:grid-cols-[360px_minmax(0,1fr)] xl:gap-8">
+        <Card className="h-fit border-zinc-200 bg-white/90 text-zinc-950 shadow-sm backdrop-blur">
           <CardHeader className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Avatar className="size-10">
-                <AvatarImage src={user.image ?? undefined} alt={user.name} />
-                <AvatarFallback>{initials || "U"}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <p className="truncate font-medium">{user.name}</p>
-                <p className="truncate text-sm text-slate-400">{user.email}</p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="size-10">
+                  <AvatarImage src={user.image ?? undefined} alt={user.name} />
+                  <AvatarFallback>{initials || "U"}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{user.name}</p>
+                  <p className="truncate text-sm text-zinc-500">{user.email}</p>
+                </div>
               </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full text-zinc-600 hover:bg-zinc-100"
+                    aria-label="Workspace settings"
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 border-zinc-200 bg-white">
+                  <DropdownMenuItem onClick={() => setTheme("light")}>
+                    <Sun className="mr-2 size-4" />
+                    Light theme
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("dark")}>
+                    <Moon className="mr-2 size-4" />
+                    Dark theme
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("system")}>
+                    <Monitor className="mr-2 size-4" />
+                    System theme
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem checked={voiceOutputEnabled} onCheckedChange={(checked) => setVoiceOutputEnabled(Boolean(checked))}>
+                    <Volume2 className="mr-2 size-4" />
+                    Voice output
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={directVoiceMode} onCheckedChange={(checked) => setDirectVoiceMode(Boolean(checked))}>
+                    <Mic className="mr-2 size-4" />
+                    Direct voice
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={conversationMode}
+                    onCheckedChange={(checked) => {
+                      const next = Boolean(checked);
+                      setConversationMode(next);
+                      if (!next) {
+                        stopListening();
+                      } else if (directVoiceMode && !listening) {
+                        startListening();
+                      }
+                    }}
+                  >
+                    <Sparkles className="mr-2 size-4" />
+                    One-to-one mode
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup value={selectedAssistant} onValueChange={(value) => setSelectedAssistant(value as typeof selectedAssistant)}>
+                    <DropdownMenuRadioItem value="auto">Auto model</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="chatgpt">ChatGPT</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="gemini">Gemini</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => window.dispatchEvent(new Event("open-global-command-bar"))}>
+                    <Command className="mr-2 size-4" />
+                    Open command bar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <CardDescription className="text-slate-400">Chat, memory, voice, and task capture in one secure space.</CardDescription>
+            <CardDescription className="text-zinc-500">
+              Calm workspace for chat, memory, voice, and task capture.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button className="w-full bg-cyan-500/15 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.28)] hover:bg-cyan-500/25" onClick={() => void createConversation()}>
+            <Button className="w-full rounded-2xl bg-zinc-950 text-white shadow-sm hover:bg-zinc-800" onClick={() => void createConversation()}>
               <Plus className="mr-2 size-4" />
               New Chat
             </Button>
 
-            <ScrollArea className="h-72 rounded-md border border-slate-700 bg-slate-950/50 p-2">
-              <div className="space-y-2">
-                {loadingConversations ? (
-                  <p className="px-2 py-1 text-sm text-slate-400">Loading chats...</p>
-                ) : conversations.length === 0 ? (
-                  <p className="px-2 py-1 text-sm text-slate-400">No chats yet.</p>
-                ) : (
-                  conversations.map((conversation) => (
-                    <div
-                      key={conversation.id}
-                      className={`flex items-center gap-2 rounded-md border p-2 ${
-                        conversation.id === activeConversationId
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-700 bg-slate-900/70"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        className="min-w-0 flex-1 text-left"
-                        onClick={() => setActiveConversationId(conversation.id)}
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2">
+              <ScrollArea className="h-[24rem]">
+                <div className="space-y-2">
+                  {loadingConversations ? (
+                    <p className="px-2 py-1 text-sm text-zinc-500">Loading chats...</p>
+                  ) : conversations.length === 0 ? (
+                    <p className="px-2 py-1 text-sm text-zinc-500">No chats yet.</p>
+                  ) : (
+                    conversations.map((conversation) => (
+                      <div
+                        key={conversation.id}
+                        className={`flex items-center gap-2 rounded-2xl border p-2 ${
+                          conversation.id === activeConversationId
+                            ? "border-zinc-900 bg-zinc-950 text-white"
+                            : "border-zinc-200 bg-white"
+                        }`}
                       >
-                        <p className="truncate text-sm font-medium">{conversation.title}</p>
-                        <p className={`text-xs ${conversation.id === activeConversationId ? "text-slate-200" : "text-slate-400"}`}>
-                          {new Date(conversation.updatedAt).toLocaleString()}
-                        </p>
-                      </button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={conversation.id === activeConversationId ? "text-white hover:bg-slate-800" : "text-slate-300 hover:bg-slate-800/80"}
-                        onClick={() => void deleteConversation(conversation.id)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-
-            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Sidebar Menu</p>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/chat">
-                  <Bot className="mr-2 size-4" />
-                  AI Chat
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/ubiquity">
-                  <Sparkles className="mr-2 size-4" />
-                  Ubiquity
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/comparison">
-                  <Brain className="mr-2 size-4" />
-                  Comparison
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/mind-map">
-                  <Sparkles className="mr-2 size-4" />
-                  Mind Map
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/logic-builder">
-                  <Cpu className="mr-2 size-4" />
-                  Logic Builder
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/voice">
-                  <Mic className="mr-2 size-4" />
-                  Voice Actions
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/semantic">
-                  <Brain className="mr-2 size-4" />
-                  Semantic Layer
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/reports">
-                  <Cpu className="mr-2 size-4" />
-                  Weekly Digest
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/library">
-                  <Sparkles className="mr-2 size-4" />
-                  Library
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/analytics">
-                  <Brain className="mr-2 size-4" />
-                  Analytics
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/developer">
-                  <Cpu className="mr-2 size-4" />
-                  API & Developer
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/model-lab">
-                  <Settings className="mr-2 size-4" />
-                  Model Lab
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/orchestrator">
-                  <Sparkles className="mr-2 size-4" />
-                  Agent Orchestrator
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/security">
-                  <ShieldCheck className="mr-2 size-4" />
-                  Security Audit
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/style">
-                  <Brain className="mr-2 size-4" />
-                  Style Tuner
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/compliance">
-                  <Cpu className="mr-2 size-4" />
-                  Compliance & Safety
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/dashboard/growth">
-                  <Sparkles className="mr-2 size-4" />
-                  Growth & Trust
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full justify-start border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
-              >
-                <a href="/contact">
-                  <Contact className="mr-2 size-4" />
-                  Contact
-                </a>
-              </Button>
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() => setActiveConversationId(conversation.id)}
+                        >
+                          <p className="truncate text-sm font-medium">{conversation.title}</p>
+                          <p className={`text-xs ${conversation.id === activeConversationId ? "text-zinc-300" : "text-zinc-500"}`}>
+                            {new Date(conversation.updatedAt).toLocaleString()}
+                          </p>
+                        </button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className={conversation.id === activeConversationId ? "text-white hover:bg-zinc-800" : "text-zinc-500 hover:bg-zinc-100"}
+                          onClick={() => void deleteConversation(conversation.id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
             </div>
 
-            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">What AI Has</p>
-              <p className="flex items-center gap-2 text-xs text-slate-300">
-                <Brain className="size-3.5 text-indigo-300" />
-                Long-term memory by conversation
-              </p>
-              <p className="flex items-center gap-2 text-xs text-slate-300">
-                <Mic className="size-3.5 text-cyan-300" />
-                Voice input and spoken replies
-              </p>
-              <p className="flex items-center gap-2 text-xs text-slate-300">
-                <Sparkles className="size-3.5 text-fuchsia-300" />
-                Quick starters and context recall
-              </p>
-            </div>
-
-            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-fuchsia-300">
-                <Cpu className="size-3.5" />
-                AI Models
-              </p>
-              <div className="grid gap-2">
-                <button
-                  type="button"
-                  className={`rounded-md border px-2 py-2 text-left text-xs transition ${
-                    selectedAssistant === "chatgpt"
-                      ? "border-cyan-400/70 bg-cyan-500/15 text-cyan-100"
-                      : "border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-400/40"
-                  }`}
-                  onClick={() => setSelectedAssistant("chatgpt")}
-                >
-                  ChatGPT
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-md border px-2 py-2 text-left text-xs transition ${
-                    selectedAssistant === "gemini"
-                      ? "border-indigo-400/70 bg-indigo-500/15 text-indigo-100"
-                      : "border-slate-700 bg-slate-900 text-slate-300 hover:border-indigo-400/40"
-                  }`}
-                  onClick={() => setSelectedAssistant("gemini")}
-                >
-                  Gemini
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-md border px-2 py-2 text-left text-xs transition ${
-                    selectedAssistant === "auto"
-                      ? "border-fuchsia-400/70 bg-fuchsia-500/15 text-fuchsia-100"
-                      : "border-slate-700 bg-slate-900 text-slate-300 hover:border-fuchsia-400/40"
-                  }`}
-                  onClick={() => setSelectedAssistant("auto")}
-                >
-                  Auto (Recommended)
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Selected model is now used for new AI responses.
-              </p>
-            </div>
-
-            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-300">
-                <Settings className="size-3.5" />
-                Settings
-              </p>
-              <p className="text-[11px] text-slate-400">Theme: {theme ?? "system"}</p>
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={theme === "light" ? "default" : "outline"}
-                  className={theme === "light" ? "bg-amber-500/20 text-amber-100" : "border-slate-700 bg-slate-900 text-slate-200"}
-                  onClick={() => setTheme("light")}
-                >
-                  <Sun className="mr-1 size-3.5" />
-                  Light
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={theme === "dark" ? "default" : "outline"}
-                  className={theme === "dark" ? "bg-slate-700 text-slate-100" : "border-slate-700 bg-slate-900 text-slate-200"}
-                  onClick={() => setTheme("dark")}
-                >
-                  <Moon className="mr-1 size-3.5" />
-                  Dark
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={theme === "system" ? "default" : "outline"}
-                  className={theme === "system" ? "bg-cyan-500/20 text-cyan-100" : "border-slate-700 bg-slate-900 text-slate-200"}
-                  onClick={() => setTheme("system")}
-                >
-                  <Monitor className="mr-1 size-3.5" />
-                  Auto
-                </Button>
-              </div>
-              <Button
-                type="button"
-                variant={voiceOutputEnabled ? "default" : "outline"}
-                size="sm"
-                className={voiceOutputEnabled ? "w-full bg-indigo-500/20 text-indigo-100 shadow-[0_0_14px_rgba(129,140,248,0.35)]" : "w-full border-slate-700 bg-slate-900 text-slate-200"}
-                onClick={() => setVoiceOutputEnabled((current) => !current)}
-              >
-                {voiceOutputEnabled ? <Volume2 className="mr-2 size-4" /> : <VolumeX className="mr-2 size-4" />}
-                Voice Output
-              </Button>
-              <Button
-                type="button"
-                variant={directVoiceMode ? "default" : "outline"}
-                size="sm"
-                className={directVoiceMode ? "w-full bg-fuchsia-500/20 text-fuchsia-100 shadow-[0_0_14px_rgba(217,70,239,0.35)]" : "w-full border-slate-700 bg-slate-900 text-slate-200"}
-                onClick={() => setDirectVoiceMode((current) => !current)}
-              >
-                {directVoiceMode ? <MicOff className="mr-2 size-4" /> : <Mic className="mr-2 size-4" />}
-                Direct Voice Chat
-              </Button>
-              <Button
-                type="button"
-                variant={conversationMode ? "default" : "outline"}
-                size="sm"
-                className={conversationMode ? "w-full bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.35)]" : "w-full border-slate-700 bg-slate-900 text-slate-200"}
-                onClick={() => {
-                  const next = !conversationMode;
-                  setConversationMode(next);
-                  if (!next) {
-                    stopListening();
-                  } else if (directVoiceMode && !listening) {
-                    startListening();
-                  }
-                }}
-              >
-                {conversationMode ? <MicOff className="mr-2 size-4" /> : <Mic className="mr-2 size-4" />}
-                One-to-One Mode
-              </Button>
-            </div>
-
-            <div className="space-y-3 rounded-md border border-slate-700 bg-slate-950/60 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Chat Details</p>
-              <p className="text-xs text-slate-300">Active: {activeConversation?.title ?? "No chat selected"}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full border-rose-700/60 bg-rose-950/30 text-rose-100 hover:bg-rose-900/40 disabled:opacity-50"
-                disabled={!activeConversationId}
-                onClick={() => {
-                  if (!activeConversationId) return;
-                  const confirmed = window.confirm("Delete this chat? This action cannot be undone.");
-                  if (!confirmed) return;
-                  void deleteConversation(activeConversationId);
-                }}
-              >
-                <Trash2 className="mr-2 size-4" />
-                Delete Active Chat
-              </Button>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <select
-                  value={adaptiveRole}
-                  onChange={(event) => setAdaptiveRole(event.target.value as "developer" | "manager")}
-                  className="h-9 rounded-md border border-slate-700 bg-slate-900 px-2 text-xs text-slate-200"
-                >
-                  <option value="developer">Developer Layout</option>
-                  <option value="manager">Manager Layout</option>
-                </select>
-                <Button
-                  type="button"
-                  variant={listening ? "default" : "outline"}
-                  size="sm"
-                  className={listening ? "bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.35)]" : "border-slate-700 bg-slate-900 text-slate-200"}
-                  onClick={toggleListening}
-                >
-                  {listening ? <MicOff className="mr-2 size-4" /> : <Mic className="mr-2 size-4" />}
-                  {listening ? "Stop" : directVoiceMode ? "Talk & Send" : "Talk"}
-                </Button>
-              </div>
-              <Button
-                type="button"
-                variant={cameraEnabled ? "default" : "outline"}
-                size="sm"
-                className={cameraEnabled ? "w-full bg-emerald-500/20 text-emerald-100 shadow-[0_0_14px_rgba(16,185,129,0.35)]" : "w-full border-slate-700 bg-slate-900 text-slate-200"}
-                onClick={() => {
-                  if (cameraEnabled) {
-                    stopCamera();
-                    return;
-                  }
-                  void startCamera();
-                }}
-              >
-                {cameraEnabled ? <CameraOff className="mr-2 size-4" /> : <Camera className="mr-2 size-4" />}
-                {cameraEnabled ? "Camera Off" : "Camera On"}
-              </Button>
+            <div className="grid gap-2 rounded-2xl border border-zinc-200 bg-white p-3 text-xs text-zinc-600">
+              <p className="font-semibold uppercase tracking-wide text-zinc-400">Workspace at a glance</p>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
+                <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
                   Messages: {messages.length}
                 </Badge>
-                <Badge variant="outline" className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
+                <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
                   Memory: {memory ? `${memory.split("\n").length} notes` : "empty"}
                 </Badge>
-                <Badge variant="outline" className="border-indigo-400/40 bg-indigo-500/10 text-indigo-200">
-                  Role: {adaptiveRole}
-                </Badge>
-                <Badge variant="outline" className="border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-200">
+                <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
                   Intent: {detectedIntent.replace("_", " ")}
                 </Badge>
               </div>
-              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-2">
-                {memory ? (
-                  memory
-                    .split("\n")
-                    .slice(0, 4)
-                    .map((line, idx) => (
-                      <p key={`${line}-${idx}`} className="truncate text-[11px] text-slate-300">
-                        - {line}
-                      </p>
-                    ))
-                ) : (
-                  <p className="text-[11px] text-slate-500">No memory captured yet.</p>
-                )}
-              </div>
-              <p className="text-[11px] text-slate-400">
-                {directVoiceMode
-                  ? "Direct voice is ON: your speech sends automatically."
-                  : "Direct voice is OFF: speech is placed in input first."}
+              <p className="text-[11px] text-zinc-500">
+                Use the menu to switch theme, model, and voice settings without leaving the canvas.
               </p>
-              {cameraError ? <p className="text-xs text-rose-300">Camera: {cameraError}</p> : null}
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-300">Quick Starters</p>
-                {[
-                  "Help me plan my day in 5 steps",
-                  "Summarize what you remember about me",
-                  "Give me a focused study plan",
-                ].map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-left text-xs text-slate-200 hover:border-cyan-400/60 hover:text-cyan-100"
-                    onClick={() => setInput(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
             </div>
 
             <Button
               variant="outline"
-              className="w-full border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              className="w-full rounded-2xl border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
               onClick={() =>
                 authClient.signOut({
                   fetchOptions: {
@@ -936,17 +603,17 @@ export function AiChatDashboard({ user }: { user: User }) {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-700/70 bg-slate-950/80 text-slate-100">
+        <Card className="border-zinc-200 bg-white/90 text-zinc-950 shadow-sm">
           <CardContent className="flex min-h-[78svh] flex-col gap-4 p-4 md:p-6">
             <div className="min-h-0 flex-1">
-              <ScrollArea className="h-full rounded-lg border border-slate-700 bg-[#050914] p-4">
+              <ScrollArea className="h-full rounded-3xl border border-zinc-200 bg-zinc-50 p-4">
                 {loadingMessages ? (
-                  <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                  <div className="flex h-full items-center justify-center text-sm text-zinc-500">
                     <Loader2 className="mr-2 size-4 animate-spin" />
                     Loading messages...
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                  <div className="flex h-full items-center justify-center text-sm text-zinc-500">
                     Start chatting. I will remember context.
                   </div>
                 ) : (
@@ -954,17 +621,17 @@ export function AiChatDashboard({ user }: { user: User }) {
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`max-w-[92%] rounded-lg px-3 py-2 text-sm ${
+                        className={`max-w-[92%] rounded-2xl px-3 py-2 text-sm ${
                           message.role === "user"
-                            ? "ml-auto border border-cyan-400/40 bg-slate-900 text-cyan-100 [text-shadow:0_0_10px_rgba(34,211,238,0.5)]"
-                            : "border border-indigo-400/35 bg-slate-950/80 text-indigo-100 [text-shadow:0_0_10px_rgba(129,140,248,0.5)]"
+                            ? "ml-auto border border-zinc-900 bg-zinc-950 text-white"
+                            : "border border-zinc-200 bg-white text-zinc-900"
                         }`}
                       >
                         <p className="whitespace-pre-wrap">{message.content}</p>
                         {message.role === "assistant" ? (
                           <button
                             type="button"
-                            className="mt-2 text-[11px] text-indigo-200 underline decoration-dotted underline-offset-2"
+                            className="mt-2 text-[11px] text-zinc-500 underline decoration-dotted underline-offset-2"
                             onClick={() => void explainAssistantMessage(message)}
                           >
                             Why this answer?
@@ -979,15 +646,15 @@ export function AiChatDashboard({ user }: { user: User }) {
             </div>
 
             {cameraEnabled ? (
-              <div className="rounded-lg border border-emerald-500/35 bg-slate-950/60 p-3">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Face-to-Face Camera</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Face-to-face camera</p>
                   <div className="flex gap-2">
                     <Button
                       type="button"
                       size="sm"
                       variant={sendLiveFrame ? "default" : "outline"}
-                      className={sendLiveFrame ? "bg-emerald-500/20 text-emerald-100" : "border-slate-700 bg-slate-900 text-slate-200"}
+                      className={sendLiveFrame ? "bg-zinc-950 text-white" : "border-zinc-200 bg-white text-zinc-700"}
                       onClick={() => setSendLiveFrame((current) => !current)}
                     >
                       Live Frame
@@ -996,7 +663,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="border-slate-700 bg-slate-900 text-slate-200"
+                      className="border-zinc-200 bg-white text-zinc-700"
                       onClick={() => {
                         const frame = captureFrame();
                         if (frame) {
@@ -1017,7 +684,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                     autoPlay
                     muted
                     playsInline
-                    className="aspect-video w-full rounded-md border border-slate-700 bg-slate-900 object-cover"
+                    className="aspect-video w-full rounded-2xl border border-zinc-200 bg-zinc-100 object-cover"
                   />
                   {capturedImage ? (
                     <div className="relative">
@@ -1027,18 +694,18 @@ export function AiChatDashboard({ user }: { user: User }) {
                         width={640}
                         height={360}
                         unoptimized
-                        className="aspect-video w-full rounded-md border border-cyan-500/40 object-cover"
+                        className="aspect-video w-full rounded-2xl border border-zinc-200 object-cover"
                       />
                       <button
                         type="button"
-                        className="absolute right-2 top-2 rounded-full border border-slate-700 bg-slate-950/80 p-1 text-slate-200 hover:bg-slate-900"
+                        className="absolute right-2 top-2 rounded-full border border-zinc-200 bg-white p-1 text-zinc-600 hover:bg-zinc-50"
                         onClick={() => setCapturedImage(null)}
                       >
                         <X className="size-3.5" />
                       </button>
                     </div>
                   ) : (
-                    <div className="flex aspect-video items-center justify-center rounded-md border border-dashed border-slate-700 bg-slate-900/60 text-xs text-slate-400">
+                    <div className="flex aspect-video items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white text-xs text-zinc-500">
                       No manual frame captured yet.
                     </div>
                   )}
@@ -1051,7 +718,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="Ask anything..."
-                className="border-slate-700 bg-slate-950 text-slate-100 placeholder:text-slate-500"
+                className="border-zinc-200 bg-white text-zinc-950 placeholder:text-zinc-400"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
@@ -1059,7 +726,7 @@ export function AiChatDashboard({ user }: { user: User }) {
                   }
                 }}
               />
-              <Button className="bg-cyan-500/15 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.25)] hover:bg-cyan-500/25" onClick={() => void sendMessage()} disabled={sending || !input.trim()}>
+              <Button className="bg-zinc-950 text-white hover:bg-zinc-800" onClick={() => void sendMessage()} disabled={sending || !input.trim()}>
                 {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               </Button>
             </div>
