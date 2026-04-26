@@ -77,6 +77,8 @@ type Message = {
     readAt: string | null;
   } | null;
   attachments?: Array<{ name: string; mimeType: string; url?: string }>;
+  reactions?: Array<{ messageId: string; userId: string; emoji: string; createdAt: string }>;
+  threadReplies?: Array<{ id: string; messageId: string; userId: string; content: string; createdAt: string }>;
 };
 
 type ConversationPayload = {
@@ -120,6 +122,26 @@ type ChatAnalytics = {
   sentimentScore: number;
   churnRisk: number;
   presence: ChatPresence;
+};
+
+type IntegrationLink = {
+  id: string;
+  provider: "slack" | "discord" | "github" | "calendar";
+  target: string;
+  status: "connected" | "pending" | "disabled";
+  createdAt: string;
+  updatedAt: string;
+};
+
+type CallSession = {
+  id: string;
+  roomName: string;
+  mode: "one_to_one" | "group";
+  status: "idle" | "ringing" | "active" | "ended";
+  screenSharing: boolean;
+  recording: boolean;
+  participants: string[];
+  updatedAt: string;
 };
 
 type SpeechRecognitionType = {
@@ -168,6 +190,22 @@ export function AiChatDashboard({ user }: { user: User }) {
   const [searchResults, setSearchResults] = useState<ChatSearchResult[]>([]);
   const [analytics, setAnalytics] = useState<ChatAnalytics | null>(null);
   const [adminAuditLogs, setAdminAuditLogs] = useState<Array<{ id: string; action: string; targetType: string; targetId: string; detail: string; createdAt: string }>>([]);
+  const [integrations, setIntegrations] = useState<IntegrationLink[]>([]);
+  const [callSessions, setCallSessions] = useState<CallSession[]>([]);
+  const [callRoomName, setCallRoomName] = useState("Design review");
+  const [callParticipants, setCallParticipants] = useState("alice@example.com,bob@example.com");
+  const [callMode, setCallMode] = useState<"one_to_one" | "group">("one_to_one");
+  const [callScreenSharing, setCallScreenSharing] = useState(true);
+  const [callRecording, setCallRecording] = useState(false);
+  const [reactionDraft, setReactionDraft] = useState<{ messageId: string; emoji: string }>({ messageId: "", emoji: "👍" });
+  const [threadDraft, setThreadDraft] = useState<{ messageId: string; content: string }>({ messageId: "", content: "" });
+  const [themeAccent, setThemeAccent] = useState("#0ea5e9");
+  const [highContrast, setHighContrast] = useState(false);
+  const [translationTarget, setTranslationTarget] = useState("es");
+  const [suggestedReply, setSuggestedReply] = useState("");
+  const [summaryPreview, setSummaryPreview] = useState("");
+  const [emotionLabel, setEmotionLabel] = useState("neutral");
+  const [offlineDraftStatus, setOfflineDraftStatus] = useState("online");
   const [adaptiveRole, setAdaptiveRole] = useState<"developer" | "manager">(
     /dev|engineer|tech|code/i.test(user.email) ? "developer" : "manager",
   );
@@ -340,6 +378,111 @@ export function AiChatDashboard({ user }: { user: User }) {
       setAnalytics(payload);
     })();
   }, [messages.length, notifications.length, activeConversationId]);
+
+  useEffect(() => {
+    const recentText = messages.slice(-8).map((message) => message.content).join("\n");
+    if (!recentText.trim()) return;
+    void (async () => {
+      const [summaryResponse, sentimentResponse, suggestionResponse, translateResponse] = await Promise.all([
+        fetch("/api/chat/ai", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ mode: "summarize", text: recentText }),
+        }),
+        fetch("/api/chat/ai", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ mode: "sentiment", text: recentText }),
+        }),
+        fetch("/api/chat/ai", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ mode: "suggest", text: input || recentText }),
+        }),
+        fetch("/api/chat/ai", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ mode: "translate", text: recentText, targetLanguage: translationTarget }),
+        }),
+      ]);
+      if (summaryResponse.ok) {
+        const payload = (await summaryResponse.json()) as { summary?: string };
+        setSummaryPreview(payload.summary ?? "");
+      }
+      if (sentimentResponse.ok) {
+        const payload = (await sentimentResponse.json()) as { label?: string };
+        setEmotionLabel(payload.label ?? "neutral");
+      }
+      if (suggestionResponse.ok) {
+        const payload = (await suggestionResponse.json()) as { suggestion?: string };
+        setSuggestedReply(payload.suggestion ?? "");
+      }
+      if (translateResponse.ok) {
+        const payload = (await translateResponse.json()) as { translation?: string };
+        setMemory((current) => `${current}\n${payload.translation ?? ""}`.trim());
+      }
+    })();
+  }, [messages, input, translationTarget]);
+
+  useEffect(() => {
+    const savedAccent = window.localStorage.getItem("ai-agent-theme-accent");
+    const savedContrast = window.localStorage.getItem("ai-agent-high-contrast");
+    if (savedAccent) setThemeAccent(savedAccent);
+    if (savedContrast) setHighContrast(savedContrast === "true");
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--theme-accent", themeAccent);
+    window.localStorage.setItem("ai-agent-theme-accent", themeAccent);
+  }, [themeAccent]);
+
+  useEffect(() => {
+    document.documentElement.dataset.highContrast = highContrast ? "true" : "false";
+    window.localStorage.setItem("ai-agent-high-contrast", String(highContrast));
+  }, [highContrast]);
+
+  useEffect(() => {
+    const syncOfflineQueue = async () => {
+      if (!navigator.onLine) {
+        setOfflineDraftStatus("offline");
+        return;
+      }
+      setOfflineDraftStatus("online");
+      const raw = window.localStorage.getItem("ai-agent-offline-queue");
+      if (!raw) return;
+      try {
+        const queue = JSON.parse(raw) as Array<{ messageText: string; imageDataUrl?: string }>;
+        if (queue.length === 0) return;
+        for (const item of queue) {
+          await sendMessageText(item.messageText, item.imageDataUrl);
+        }
+        window.localStorage.removeItem("ai-agent-offline-queue");
+        toast.success("Offline messages synced.");
+      } catch {
+        // keep queue for later
+      }
+    };
+    void syncOfflineQueue();
+    window.addEventListener("online", syncOfflineQueue);
+    return () => window.removeEventListener("online", syncOfflineQueue);
+  }, [activeConversationId, capturedImage, cameraEnabled, sendLiveFrame, selectedAssistant, conversationMode, directVoiceMode, listening, pendingPreviews]);
+
+  useEffect(() => {
+    void (async () => {
+      const [integrationsResponse, callsResponse] = await Promise.all([
+        fetch("/api/chat/integrations", { cache: "no-store" }),
+        fetch("/api/chat/calls", { cache: "no-store" }),
+      ]);
+      if (integrationsResponse.ok) {
+        const integrationsPayload = (await integrationsResponse.json()) as { integrations?: IntegrationLink[] };
+        setIntegrations(integrationsPayload.integrations ?? []);
+      }
+      if (callsResponse.ok) {
+        const callsPayload = (await callsResponse.json()) as { calls?: CallSession[] };
+        setCallSessions(callsPayload.calls ?? []);
+      }
+    })();
+  }, [activeConversationId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -573,6 +716,14 @@ export function AiChatDashboard({ user }: { user: User }) {
         startListening();
       }
     } catch (error) {
+      if (!navigator.onLine) {
+        const existingQueue = JSON.parse(window.localStorage.getItem("ai-agent-offline-queue") || "[]") as Array<{ messageText: string; imageDataUrl?: string }>;
+        existingQueue.push({ messageText, imageDataUrl: imageDataUrl || undefined });
+        window.localStorage.setItem("ai-agent-offline-queue", JSON.stringify(existingQueue));
+        setOfflineDraftStatus("queued");
+        toast.info("You're offline. Message queued for sync.");
+        return;
+      }
       toast.error(error instanceof Error ? error.message : "Unable to send message");
     } finally {
       setSending(false);
@@ -659,6 +810,109 @@ export function AiChatDashboard({ user }: { user: User }) {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to stage files");
     }
+  }
+
+  async function addMessageReaction(messageId: string, emoji: string) {
+    const response = await fetch("/api/chat/reactions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messageId, emoji }),
+    });
+    if (!response.ok) return;
+    const payload = (await response.json()) as { reaction: { messageId: string; userId: string; emoji: string; createdAt: string } };
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === messageId
+          ? { ...message, reactions: [...(message.reactions ?? []), payload.reaction] }
+          : message,
+      ),
+    );
+  }
+
+  async function sendThreadReply() {
+    if (!threadDraft.messageId || !threadDraft.content.trim()) return;
+    const response = await fetch("/api/chat/threads", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(threadDraft),
+    });
+    if (!response.ok) return;
+    const payload = (await response.json()) as { reply: { id: string; messageId: string; userId: string; content: string; createdAt: string } };
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === threadDraft.messageId
+          ? { ...message, threadReplies: [...(message.threadReplies ?? []), payload.reply] }
+          : message,
+      ),
+    );
+    setThreadDraft({ messageId: "", content: "" });
+  }
+
+  function openThreadComposer(messageId: string) {
+    setThreadDraft((current) => ({
+      messageId,
+      content: current.messageId === messageId ? current.content : "",
+    }));
+  }
+
+  async function connectIntegration(provider: IntegrationLink["provider"]) {
+    const response = await fetch("/api/chat/integrations", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider, target: user.email }),
+    });
+    if (!response.ok) return;
+    const payload = (await response.json()) as { integration?: IntegrationLink };
+    if (payload.integration) {
+      setIntegrations((current) => [payload.integration!, ...current.filter((item) => item.provider !== provider)]);
+      toast.success(`${provider} connected.`);
+    }
+  }
+
+  async function startCallRoom() {
+    const response = await fetch("/api/chat/calls", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        roomName: callRoomName,
+        mode: callMode,
+        screenSharing: callScreenSharing,
+        recording: callRecording,
+        participants: callParticipants.split(",").map((item) => item.trim()).filter(Boolean),
+        status: "ringing",
+      }),
+    });
+    if (!response.ok) return;
+    const payload = (await response.json()) as { call?: CallSession };
+    if (payload.call) {
+      setCallSessions((current) => [payload.call!, ...current]);
+      toast.success("Call room created.");
+    }
+  }
+
+  async function updateCallRoom(callId: string, status: CallSession["status"]) {
+    await fetch("/api/chat/calls", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ callId, status }),
+    });
+    setCallSessions((current) => current.map((call) => (call.id === callId ? { ...call, status } : call)));
+  }
+
+  async function askAIHelp(mode: "summarize" | "sentiment" | "suggest" | "translate") {
+    const text = messages.slice(-8).map((message) => message.content).join("\n");
+    if (!text.trim()) return;
+    const response = await fetch("/api/chat/ai", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode, text, targetLanguage: translationTarget }),
+    });
+    if (!response.ok) return;
+    const payload = (await response.json()) as Record<string, string>;
+    if (payload.summary) setSummaryPreview(payload.summary);
+    if (payload.label) setEmotionLabel(payload.label);
+    if (payload.suggestion) setSuggestedReply(payload.suggestion);
+    if (payload.translation) toast.success(payload.translation);
   }
 
   function markTyping(nextValue: string) {
@@ -850,6 +1104,12 @@ export function AiChatDashboard({ user }: { user: User }) {
                   Presence: {presence?.status ?? "offline"}
                 </Badge>
                 <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                  Sync: {offlineDraftStatus}
+                </Badge>
+                <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                  Role: {adaptiveRole}
+                </Badge>
+                <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
                   Latency: {analytics?.messageLatencyMs ?? 0}ms
                 </Badge>
                 <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
@@ -885,6 +1145,123 @@ export function AiChatDashboard({ user }: { user: User }) {
               <p className="text-[11px] text-zinc-500">
                 Use the menu to switch theme, model, and voice settings without leaving the canvas.
               </p>
+              <div className="grid gap-2 rounded-2xl border border-zinc-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Personalization</p>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    aria-label="Accent color"
+                    type="color"
+                    value={themeAccent}
+                    onChange={(event) => setThemeAccent(event.target.value)}
+                    className="h-9 w-14 cursor-pointer rounded-md border border-zinc-200 bg-white"
+                  />
+                  <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => setHighContrast((value) => !value)}>
+                    {highContrast ? "High contrast on" : "High contrast off"}
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-2 rounded-2xl border border-zinc-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Integrations</p>
+                <div className="flex flex-wrap gap-2">
+                  {(["slack", "discord", "github", "calendar"] as const).map((provider) => (
+                    <Button
+                      key={provider}
+                      type="button"
+                      variant="outline"
+                      className="border-zinc-200 bg-white text-zinc-700"
+                      onClick={() => void connectIntegration(provider)}
+                    >
+                      Connect {provider}
+                    </Button>
+                  ))}
+                </div>
+                <div className="space-y-1 text-xs text-zinc-500">
+                  {integrations.slice(0, 4).map((item) => (
+                    <p key={item.id}>
+                      {item.provider} · {item.target} · {item.status}
+                    </p>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-2 rounded-2xl border border-zinc-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">AI Assist</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => void askAIHelp("summarize")}>
+                    Summarize
+                  </Button>
+                  <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => void askAIHelp("sentiment")}>
+                    Sentiment
+                  </Button>
+                  <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => void askAIHelp("suggest")}>
+                    Suggest reply
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={translationTarget}
+                    onChange={(event) => setTranslationTarget(event.target.value)}
+                    className="border-zinc-200 bg-white text-zinc-950 placeholder:text-zinc-400"
+                    placeholder="Translate to (es, fr, hi)"
+                  />
+                  <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => void askAIHelp("translate")}>
+                    Translate
+                  </Button>
+                </div>
+                {summaryPreview ? <p className="text-xs text-zinc-500">Summary: {summaryPreview}</p> : null}
+                {suggestedReply ? <p className="text-xs text-zinc-500">Suggested reply: {suggestedReply}</p> : null}
+                <p className="text-xs text-zinc-500">Emotion: {emotionLabel}</p>
+              </div>
+              <div className="grid gap-2 rounded-2xl border border-zinc-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Calls</p>
+                <Input
+                  value={callRoomName}
+                  onChange={(event) => setCallRoomName(event.target.value)}
+                  className="border-zinc-200 bg-white text-zinc-950 placeholder:text-zinc-400"
+                  placeholder="Room name"
+                />
+                <Input
+                  value={callParticipants}
+                  onChange={(event) => setCallParticipants(event.target.value)}
+                  className="border-zinc-200 bg-white text-zinc-950 placeholder:text-zinc-400"
+                  placeholder="Participants, comma separated"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant={callMode === "one_to_one" ? "default" : "outline"} onClick={() => setCallMode("one_to_one")}>
+                    1:1
+                  </Button>
+                  <Button type="button" variant={callMode === "group" ? "default" : "outline"} onClick={() => setCallMode("group")}>
+                    Group
+                  </Button>
+                  <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => setCallScreenSharing((value) => !value)}>
+                    {callScreenSharing ? "Screen share on" : "Screen share off"}
+                  </Button>
+                  <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => setCallRecording((value) => !value)}>
+                    {callRecording ? "Recording on" : "Recording off"}
+                  </Button>
+                </div>
+                <Button type="button" className="bg-zinc-950 text-white hover:bg-zinc-800" onClick={() => void startCallRoom()}>
+                  Start call room
+                </Button>
+                <div className="space-y-2 text-xs text-zinc-500">
+                  {callSessions.slice(0, 3).map((call) => (
+                    <div key={call.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-2">
+                      <p className="font-medium text-zinc-900">{call.roomName}</p>
+                      <p>
+                        {call.mode} · {call.status} · {call.participants.length} participants
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <Button type="button" size="sm" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => void updateCallRoom(call.id, "active")}>
+                          Join
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => void updateCallRoom(call.id, "ended")}>
+                          End
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {callSessions.length === 0 ? <p>No call rooms yet.</p> : null}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => void fetch("/api/chat/presence", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "online" }) })}>
                   Mark online
@@ -995,13 +1372,57 @@ export function AiChatDashboard({ user }: { user: User }) {
                           ) : null}
                         </div>
                         {message.role === "assistant" ? (
-                          <button
-                            type="button"
-                            className="mt-2 text-[11px] text-zinc-500 underline decoration-dotted underline-offset-2"
-                            onClick={() => void explainAssistantMessage(message)}
-                          >
-                            Why this answer?
-                          </button>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
+                            <button
+                              type="button"
+                              className="underline decoration-dotted underline-offset-2"
+                              onClick={() => void explainAssistantMessage(message)}
+                            >
+                              Why this answer?
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-full border border-zinc-200 bg-white px-2 py-1 text-zinc-600 hover:bg-zinc-50"
+                              onClick={() => openThreadComposer(message.id)}
+                            >
+                              Reply in thread
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-full border border-zinc-200 bg-white px-2 py-1 text-zinc-600 hover:bg-zinc-50"
+                              onClick={() => void addMessageReaction(message.id, "👍")}
+                            >
+                              👍
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-full border border-zinc-200 bg-white px-2 py-1 text-zinc-600 hover:bg-zinc-50"
+                              onClick={() => void addMessageReaction(message.id, "🎯")}
+                            >
+                              🎯
+                            </button>
+                          </div>
+                        ) : null}
+                        {message.reactions?.length ? (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {message.reactions.map((reaction, index) => (
+                              <span
+                                key={`${message.id}-${reaction.userId}-${reaction.emoji}-${index}`}
+                                className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] text-zinc-600"
+                              >
+                                {reaction.emoji}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        {message.threadReplies?.length ? (
+                          <div className="mt-2 space-y-2 rounded-xl border border-zinc-200 bg-zinc-50 p-2">
+                            {message.threadReplies.map((reply) => (
+                              <div key={reply.id} className="rounded-lg bg-white px-2 py-1 text-xs text-zinc-700">
+                                {reply.content}
+                              </div>
+                            ))}
+                          </div>
                         ) : null}
                       </div>
                     ))}
@@ -1118,6 +1539,34 @@ export function AiChatDashboard({ user }: { user: User }) {
                 </div>
               ) : null}
             </div>
+
+            {threadDraft.messageId ? (
+              <div className="rounded-2xl border border-zinc-200 bg-white p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Thread reply</p>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setThreadDraft({ messageId: "", content: "" })}>
+                    Clear
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={threadDraft.content}
+                    onChange={(event) => setThreadDraft((current) => ({ ...current, content: event.target.value }))}
+                    placeholder="Write a thread reply..."
+                    className="border-zinc-200 bg-white text-zinc-950 placeholder:text-zinc-400"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        void sendThreadReply();
+                      }
+                    }}
+                  />
+                  <Button type="button" className="bg-zinc-950 text-white hover:bg-zinc-800" onClick={() => void sendThreadReply()}>
+                    Reply
+                  </Button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="flex gap-2">
               <Input

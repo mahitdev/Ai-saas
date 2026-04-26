@@ -50,6 +50,43 @@ type ChatAuditLog = {
   createdAt: string;
 };
 
+type ChatReaction = {
+  messageId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
+};
+
+type ChatThreadReply = {
+  id: string;
+  messageId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+};
+
+type ChatIntegrationLink = {
+  id: string;
+  userId: string;
+  provider: "slack" | "discord" | "github" | "calendar";
+  target: string;
+  status: "connected" | "pending" | "disabled";
+  createdAt: string;
+  updatedAt: string;
+};
+
+type ChatCallSession = {
+  id: string;
+  userId: string;
+  roomName: string;
+  mode: "one_to_one" | "group";
+  status: "idle" | "ringing" | "active" | "ended";
+  screenSharing: boolean;
+  recording: boolean;
+  participants: string[];
+  updatedAt: string;
+};
+
 type RealtimeEvent =
   | { type: "presence"; presence: ChatPresence }
   | { type: "typing"; userId: string; conversationId: string | null; typing: boolean; updatedAt: string }
@@ -63,6 +100,10 @@ const receiptsByMessageId = new Map<string, ChatReceipt>();
 const notificationsByUser = new Map<string, ChatNotification[]>();
 const uploadsByUser = new Map<string, ChatUpload[]>();
 const auditLogsByUser = new Map<string, ChatAuditLog[]>();
+const reactionsByUser = new Map<string, ChatReaction[]>();
+const threadRepliesByUser = new Map<string, ChatThreadReply[]>();
+const integrationsByUser = new Map<string, ChatIntegrationLink[]>();
+const callSessionsByUser = new Map<string, ChatCallSession[]>();
 const eventListenersByUser = new Map<string, Set<(event: RealtimeEvent) => void>>();
 
 function nowIso() {
@@ -226,7 +267,103 @@ export function getChatRealtimeSnapshot(userId: string) {
     notifications: listNotifications(userId),
     uploads: listUploads(userId),
     auditLogs: listAuditLogs(userId),
+    reactions: listReactions(userId),
+    threadReplies: listThreadReplies(userId),
+    integrations: listIntegrations(userId),
   };
+}
+
+export function addReaction(userId: string, messageId: string, emoji: string) {
+  const reaction: ChatReaction = {
+    messageId,
+    userId,
+    emoji,
+    createdAt: nowIso(),
+  };
+  const list = reactionsByUser.get(userId) ?? [];
+  list.unshift(reaction);
+  reactionsByUser.set(userId, list.slice(0, 100));
+  pushToListeners(userId, { type: "audit", audit: { id: crypto.randomUUID(), userId, action: "reaction", targetType: "message", targetId: messageId, detail: emoji, createdAt: nowIso() } });
+  return reaction;
+}
+
+export function listReactions(userId: string) {
+  return reactionsByUser.get(userId) ?? [];
+}
+
+export function addThreadReply(userId: string, messageId: string, content: string) {
+  const reply: ChatThreadReply = {
+    id: crypto.randomUUID(),
+    messageId,
+    userId,
+    content,
+    createdAt: nowIso(),
+  };
+  const list = threadRepliesByUser.get(userId) ?? [];
+  list.unshift(reply);
+  threadRepliesByUser.set(userId, list.slice(0, 100));
+  return reply;
+}
+
+export function listThreadReplies(userId: string) {
+  return threadRepliesByUser.get(userId) ?? [];
+}
+
+export function addIntegration(userId: string, provider: ChatIntegrationLink["provider"], target: string) {
+  const next: ChatIntegrationLink = {
+    id: crypto.randomUUID(),
+    userId,
+    provider,
+    target,
+    status: "connected",
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+  const list = integrationsByUser.get(userId) ?? [];
+  const filtered = list.filter((item) => !(item.provider === provider && item.target === target));
+  filtered.unshift(next);
+  integrationsByUser.set(userId, filtered.slice(0, 20));
+  return next;
+}
+
+export function listIntegrations(userId: string) {
+  return integrationsByUser.get(userId) ?? [];
+}
+
+export function createCallSession(
+  userId: string,
+  session: Omit<ChatCallSession, "id" | "userId" | "updatedAt">,
+) {
+  const next: ChatCallSession = {
+    ...session,
+    id: crypto.randomUUID(),
+    userId,
+    updatedAt: nowIso(),
+  };
+  const list = callSessionsByUser.get(userId) ?? [];
+  list.unshift(next);
+  callSessionsByUser.set(userId, list.slice(0, 20));
+  return next;
+}
+
+export function listCallSessions(userId: string) {
+  return callSessionsByUser.get(userId) ?? [];
+}
+
+export function updateCallSession(
+  userId: string,
+  sessionId: string,
+  updates: Partial<Omit<ChatCallSession, "id" | "userId">>,
+) {
+  const list = callSessionsByUser.get(userId) ?? [];
+  let updated: ChatCallSession | null = null;
+  const next = list.map((item) => {
+    if (item.id !== sessionId) return item;
+    updated = { ...item, ...updates, updatedAt: nowIso() };
+    return updated;
+  });
+  callSessionsByUser.set(userId, next);
+  return updated;
 }
 
 export type { ChatPresence, ChatReceipt, ChatNotification, ChatUpload, ChatAuditLog, RealtimeEvent, PresenceStatus };

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/db";
 import { aiConversation, aiMessage } from "@/db/schema";
-import { getReceipt } from "@/lib/server/chat-realtime";
+import { getReceipt, listReactions, listThreadReplies } from "@/lib/server/chat-realtime";
 import { getAuthenticatedUser, unauthorized } from "@/lib/server/session";
 
 type RouteContext = {
@@ -40,6 +40,8 @@ export async function GET(_: Request, context: RouteContext) {
       messages: messages.map((message) => ({
         ...message,
         receipt: getReceipt(message.id),
+        reactions: listReactions(user.id).filter((reaction) => reaction.messageId === message.id),
+        threadReplies: listThreadReplies(user.id).filter((reply) => reply.messageId === message.id),
       })),
     });
   } catch (error) {
