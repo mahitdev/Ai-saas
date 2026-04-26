@@ -1314,7 +1314,7 @@ export function AiChatDashboard({ user }: { user: User }) {
 
             <Button
               variant="outline"
-              className="w-full rounded-2xl border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+              className="w-full rounded-2xl border-zinc-800 bg-zinc-950 text-zinc-100 hover:bg-zinc-900 hover:text-white"
               onClick={() =>
                 authClient.signOut({
                   fetchOptions: {

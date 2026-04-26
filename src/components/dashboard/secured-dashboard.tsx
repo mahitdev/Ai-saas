@@ -913,7 +913,7 @@ export function SecuredDashboard({ user }: { user: User }) {
 
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full border-zinc-800 bg-zinc-950 text-zinc-100 hover:bg-zinc-900 hover:text-white"
               onClick={() =>
                 authClient.signOut({
                   fetchOptions: {
