@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { Eye, EyeOff, Fingerprint, Github, KeyRound, Mail, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth.client";
@@ -32,6 +32,8 @@ const Page = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [capsLockOn, setCapsLockOn] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [backupCode, setBackupCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const passwordScore = [
@@ -80,6 +82,84 @@ const Page = () => {
 
     setIsLoading(false);
   };
+
+  async function signInWithSocial(provider: "google" | "github" | "microsoft") {
+    const response = await authClient.$fetch("/sign-in/social", {
+      method: "POST",
+      body: {
+        provider,
+        callbackURL: "/dashboard",
+        requestSignUp: true,
+        disableRedirect: true,
+      },
+    });
+    const payload = (response as { url?: string; redirect?: boolean }) ?? {};
+    if (payload.url) {
+      window.location.assign(payload.url);
+    }
+  }
+
+  async function signInWithPasskey() {
+    const response = await authClient.signIn.passkey({ autoFill: true, email });
+    if (response?.error) {
+      toast.error(response.error.message || "Unable to use passkey.");
+      return;
+    }
+    toast.success("Passkey prompt opened.");
+  }
+
+  async function sendVerificationEmail() {
+    const response = await fetch("/api/auth/send-verification-email", { method: "POST" });
+    if (response.ok) {
+      toast.success("Verification email sent.");
+      return;
+    }
+    toast.error("Unable to resend verification email.");
+  }
+
+  async function requestPasswordReset() {
+    if (!email.trim()) return;
+    const response = await fetch("/api/auth/forget-password", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, redirectTo: `${window.location.origin}/auth/reset-password` }),
+    });
+    if (response.ok) {
+      toast.success("Password reset email sent.");
+      return;
+    }
+    toast.error("Unable to request reset.");
+  }
+
+  async function verifyTwoFactor() {
+    if (!twoFactorCode.trim()) return;
+    const response = await fetch("/api/auth/two-factor/verify-otp", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: twoFactorCode.trim(), trustDevice: rememberMe }),
+    });
+    if (response.ok) {
+      toast.success("Two-factor verified.");
+      router.push("/dashboard");
+      return;
+    }
+    toast.error("Invalid two-factor code.");
+  }
+
+  async function verifyBackupCode() {
+    if (!backupCode.trim()) return;
+    const response = await fetch("/api/auth/two-factor/verify-backup-code", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: backupCode.trim(), trustDevice: rememberMe }),
+    });
+    if (response.ok) {
+      toast.success("Backup code accepted.");
+      router.push("/dashboard");
+      return;
+    }
+    toast.error("Invalid backup code.");
+  }
 
   if (isSessionPending) {
     return (
@@ -171,6 +251,37 @@ const Page = () => {
             ) : null}
           </div>
 
+          <div className="grid gap-3 rounded-xl border border-border/60 bg-muted/20 p-3">
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="sign-in-2fa">2FA code</Label>
+                <Input
+                  id="sign-in-2fa"
+                  placeholder="123456"
+                  value={twoFactorCode}
+                  onChange={(event) => setTwoFactorCode(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sign-in-backup">Backup code</Label>
+                <Input
+                  id="sign-in-backup"
+                  placeholder="ABCDE-FGHIJ"
+                  value={backupCode}
+                  onChange={(event) => setBackupCode(event.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" className="border-border/70 bg-background/80" onClick={() => void verifyTwoFactor()}>
+                Verify 2FA
+              </Button>
+              <Button type="button" variant="outline" className="border-border/70 bg-background/80" onClick={() => void verifyBackupCode()}>
+                Use backup code
+              </Button>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between text-sm">
             <label className="flex cursor-pointer items-center gap-2 text-muted-foreground">
               <Checkbox
@@ -188,6 +299,52 @@ const Page = () => {
             disabled={isLoading}
           >
             {isLoading ? "Signing in..." : "Sign in"}
+          </Button>
+
+          <div className="grid gap-2 md:grid-cols-3">
+            {(
+              [
+                ["google", "Continue with Google"],
+                ["github", "Continue with GitHub"],
+                ["microsoft", "Continue with Microsoft"],
+              ] as const
+            ).map(([provider, label]) => (
+              <Button
+                key={provider}
+                type="button"
+                variant="outline"
+                className="justify-between border-border/70 bg-background/80"
+                onClick={() => void signInWithSocial(provider)}
+              >
+                <span className="inline-flex items-center gap-2">
+                  {provider === "github" ? <Github className="size-4" /> : <Mail className="size-4" />}
+                  {label}
+                </span>
+                <span className="text-xs text-muted-foreground">OAuth</span>
+              </Button>
+            ))}
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <Button type="button" variant="outline" className="justify-between border-border/70 bg-background/80" onClick={() => void signInWithPasskey()}>
+              <span className="inline-flex items-center gap-2">
+                <Fingerprint className="size-4" />
+                Biometric / passkey
+              </span>
+              <span className="text-xs text-muted-foreground">Fast login</span>
+            </Button>
+            <Button type="button" variant="outline" className="justify-between border-border/70 bg-background/80" onClick={() => void requestPasswordReset()}>
+              <span className="inline-flex items-center gap-2">
+                <KeyRound className="size-4" />
+                Forgot password
+              </span>
+              <span className="text-xs text-muted-foreground">Reset link</span>
+            </Button>
+          </div>
+
+          <Button type="button" variant="ghost" className="w-full text-muted-foreground hover:text-foreground" onClick={() => void sendVerificationEmail()}>
+            <ShieldCheck className="mr-2 size-4" />
+            Resend verification email
           </Button>
 
           <div className="grid grid-cols-2 gap-2">

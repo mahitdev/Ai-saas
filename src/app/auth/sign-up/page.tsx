@@ -45,12 +45,12 @@ const Page = () => {
         name,
         email,
         password,
-        callbackURL: "/dashboard",
+        callbackURL: "/onboarding",
       },
       {
         onSuccess: () => {
           toast.success("Account created successfully.");
-          router.push("/dashboard");
+          router.push("/onboarding");
         },
         onError: (ctx) => {
           toast.error(ctx.error.message || "Unable to create account.");
@@ -95,7 +95,7 @@ const Page = () => {
           Secure account setup
         </div>
         <CardTitle>Create your account</CardTitle>
-        <CardDescription>Use your email to start with chat, memory, tasks, and voice.</CardDescription>
+        <CardDescription>Use your email to start with chat, memory, tasks, voice, and a quick onboarding wizard.</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -139,6 +139,10 @@ const Page = () => {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Creating account..." : "Create account"}
           </Button>
+
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+            After sign-up, you’ll be guided to a wizard to set preferences, invite teammates, or create your first project/chat.
+          </div>
 
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-lg border border-border/60 bg-muted/30 p-2 text-center text-xs text-muted-foreground">

@@ -20,6 +20,7 @@ import {
   Orbit,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings,
   ShieldCheck,
   Sparkles,
   Workflow,
@@ -46,6 +47,7 @@ const navigation = [
   { href: "/dashboard/mind-map", label: "Context", icon: Brain },
   { href: "/dashboard/style", label: "Style", icon: SlidersHorizontal },
   { href: "/dashboard/compliance", label: "Compliance", icon: Wrench },
+  { href: "/dashboard/account", label: "Account", icon: Settings },
 ];
 
 type DashboardShellProps = {

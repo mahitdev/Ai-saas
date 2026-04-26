@@ -8,6 +8,15 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
+  bio: text("bio").default("").notNull(),
+  phoneNumber: text("phone_number"),
+  phoneVerified: boolean("phone_verified").default(false).notNull(),
+  privacySettings: text("privacy_settings").default("{}").notNull(),
+  themeAccent: text("theme_accent").default("#0ea5e9").notNull(),
+  highContrast: boolean("high_contrast").default(false).notNull(),
+  failedLoginAttempts: integer("failed_login_attempts").default(0).notNull(),
+  lockedUntil: timestamp("locked_until"),
+  onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
