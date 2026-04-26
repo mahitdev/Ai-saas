@@ -10,6 +10,8 @@ import {
   Contact,
   Cpu,
   Command,
+  Check,
+  CheckCheck,
   ImagePlus,
   Loader2,
   Monitor,
@@ -26,6 +28,7 @@ import {
   Trash2,
   Volume2,
   VolumeX,
+  Search,
   X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -68,11 +71,55 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
+  receipt?: {
+    sentAt: string;
+    deliveredAt: string | null;
+    readAt: string | null;
+  } | null;
+  attachments?: Array<{ name: string; mimeType: string; url?: string }>;
 };
 
 type ConversationPayload = {
   conversations: Conversation[];
   memory: string;
+};
+
+type ChatPresence = {
+  userId: string;
+  status: "online" | "away" | "offline";
+  lastSeenAt: string;
+  typingConversationId: string | null;
+  typing: boolean;
+  updatedAt: string;
+} | null;
+
+type ChatNotification = {
+  id: string;
+  kind: "message" | "task" | "mention" | "deadline" | "security";
+  title: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+  conversationId?: string | null;
+  messageId?: string | null;
+};
+
+type ChatSearchResult = {
+  messageId: string;
+  conversationId: string;
+  content: string;
+  role: "user" | "assistant";
+  createdAt: string;
+  conversationTitle: string | null;
+  highlight: string;
+};
+
+type ChatAnalytics = {
+  activeUsers: number;
+  messageLatencyMs: number;
+  sentimentScore: number;
+  churnRisk: number;
+  presence: ChatPresence;
 };
 
 type SpeechRecognitionType = {
@@ -112,6 +159,15 @@ export function AiChatDashboard({ user }: { user: User }) {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [sendLiveFrame, setSendLiveFrame] = useState(true);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingPreviews, setPendingPreviews] = useState<Array<{ name: string; mimeType: string; previewUrl: string; size: number }>>([]);
+  const [presence, setPresence] = useState<ChatPresence>(null);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<ChatNotification[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<ChatSearchResult[]>([]);
+  const [analytics, setAnalytics] = useState<ChatAnalytics | null>(null);
+  const [adminAuditLogs, setAdminAuditLogs] = useState<Array<{ id: string; action: string; targetType: string; targetId: string; detail: string; createdAt: string }>>([]);
   const [adaptiveRole, setAdaptiveRole] = useState<"developer" | "manager">(
     /dev|engineer|tech|code/i.test(user.email) ? "developer" : "manager",
   );
@@ -123,6 +179,8 @@ export function AiChatDashboard({ user }: { user: User }) {
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const typingTimerRef = useRef<number | null>(null);
+  const isAdmin = /admin/i.test(user.email) || (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "").split(",").map((item) => item.trim().toLowerCase()).includes(user.email.toLowerCase());
 
   const initials = useMemo(
     () =>
@@ -184,6 +242,104 @@ export function AiChatDashboard({ user }: { user: User }) {
     }
     void fetchMessages(activeConversationId);
   }, [activeConversationId, fetchMessages]);
+
+  useEffect(() => {
+    void (async () => {
+      const response = await fetch("/api/chat/presence", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { presence?: ChatPresence };
+      setPresence(payload.presence ?? null);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!activeConversationId) return;
+    const source = new EventSource("/api/chat/realtime");
+    source.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as
+          | { type: "snapshot"; presence: ChatPresence; notifications: ChatNotification[]; uploads: unknown[]; auditLogs: unknown[] }
+          | { type: "typing"; userId: string; conversationId: string | null; typing: boolean; updatedAt: string }
+          | { type: "presence"; presence: ChatPresence }
+          | { type: "receipt"; receipt: { messageId: string; sentAt: string; deliveredAt: string | null; readAt: string | null } }
+          | { type: "notification"; notification: ChatNotification };
+        if (payload.type === "snapshot") {
+          setPresence(payload.presence);
+          setNotifications(payload.notifications);
+          return;
+        }
+        if (payload.type === "typing") {
+          setTypingUser(payload.typing ? payload.userId : null);
+          return;
+        }
+        if (payload.type === "presence") {
+          setPresence(payload.presence);
+          return;
+        }
+        if (payload.type === "receipt") {
+          setMessages((current) =>
+            current.map((message) =>
+              message.id === payload.receipt.messageId ? { ...message, receipt: payload.receipt } : message,
+            ),
+          );
+          return;
+        }
+        if (payload.type === "notification") {
+          setNotifications((current) => [payload.notification, ...current]);
+          toast(payload.notification.title);
+        }
+      } catch {
+        // ignore malformed realtime frame
+      }
+    };
+    return () => source.close();
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) {
+        window.clearTimeout(typingTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeConversationId) return;
+    const handleFocus = () => void fetch("/api/chat/presence", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "online" }) });
+    const handleBlur = () => void fetch("/api/chat/presence", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "away" }) });
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("blur", handleBlur);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      const response = await fetch(
+        `/api/chat/search?q=${encodeURIComponent(searchQuery)}${activeConversation ? `&conversationId=${activeConversation.id}` : ""}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) return;
+      const payload = (await response.json()) as { results: ChatSearchResult[] };
+      setSearchResults(payload.results ?? []);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery, activeConversation?.id]);
+
+  useEffect(() => {
+    void (async () => {
+      const response = await fetch("/api/chat/analytics", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as ChatAnalytics;
+      setAnalytics(payload);
+    })();
+  }, [messages.length, notifications.length, activeConversationId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -265,6 +421,27 @@ export function AiChatDashboard({ user }: { user: User }) {
     return canvas.toDataURL("image/jpeg", 0.75);
   }
 
+  async function prepareFiles(files: File[]) {
+    const nextPreviews = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise<{ name: string; mimeType: string; previewUrl: string; size: number }>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve({
+                name: file.name,
+                mimeType: file.type || "application/octet-stream",
+                previewUrl: typeof reader.result === "string" ? reader.result : "",
+                size: file.size,
+              });
+            reader.readAsDataURL(file);
+          }),
+      ),
+    );
+    setPendingFiles(files);
+    setPendingPreviews(nextPreviews);
+  }
+
   function speak(text: string) {
     return new Promise<void>((resolve) => {
       if (!voiceOutputEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -327,6 +504,12 @@ export function AiChatDashboard({ user }: { user: User }) {
     const imageDataUrl = explicitImageDataUrl || (cameraEnabled && sendLiveFrame ? captureFrame() : "");
 
     try {
+      const attachments = pendingPreviews.map((item) => ({
+        name: item.name,
+        mimeType: item.mimeType,
+        size: item.size,
+        url: item.previewUrl,
+      }));
       const response = await fetch("/api/chat/send", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -335,6 +518,7 @@ export function AiChatDashboard({ user }: { user: User }) {
           message: messageText,
           assistant: selectedAssistant,
           imageDataUrl: imageDataUrl || undefined,
+          attachments: attachments.length ? attachments : undefined,
         }),
       });
       if (!response.ok) throw new Error("Failed to send message");
@@ -344,18 +528,47 @@ export function AiChatDashboard({ user }: { user: User }) {
         assistantMessage: Message;
         memorySummary: string;
         onboardingAha?: string | null;
+        receipts?: {
+          user: { sentAt: string; deliveredAt: string | null; readAt: string | null };
+          assistant: { sentAt: string; deliveredAt: string | null; readAt: string | null };
+        };
       };
 
       if (!activeConversationId) {
         await fetchConversations();
       }
       setActiveConversationId(payload.conversationId);
-      setMessages((previous) => [...previous, payload.userMessage, payload.assistantMessage]);
+      const attachmentSummary = pendingPreviews.map((item) => ({
+        name: item.name,
+        mimeType: item.mimeType,
+        url: item.previewUrl,
+      }));
+      setMessages((previous) => [
+        ...previous,
+        { ...payload.userMessage, attachments: attachmentSummary },
+        payload.assistantMessage,
+      ]);
       setMemory(payload.memorySummary);
+      if (payload.receipts) {
+        if (payload.receipts.user) {
+          setMessages((current) =>
+            current.map((message) => (message.id === payload.userMessage.id ? { ...message, receipt: payload.receipts!.user } : message)),
+          );
+        }
+        if (payload.receipts.assistant) {
+          setMessages((current) =>
+            current.map((message) =>
+              message.id === payload.assistantMessage.id ? { ...message, receipt: payload.receipts!.assistant } : message,
+            ),
+          );
+        }
+      }
       if (payload.onboardingAha) {
         toast.success(payload.onboardingAha);
       }
       await speak(payload.assistantMessage.content);
+      setPendingFiles([]);
+      setPendingPreviews([]);
       if (conversationMode && directVoiceMode && !listening) {
         startListening();
       }
@@ -413,6 +626,58 @@ export function AiChatDashboard({ user }: { user: User }) {
     setInput("");
     setCapturedImage(null);
     await sendMessageText(messageText, imageToSend);
+  }
+
+  async function uploadFile(file: File) {
+    const response = await fetch("/api/chat/uploads", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: file.name,
+        mimeType: file.type || "application/octet-stream",
+        size: file.size,
+        previewUrl: await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+          reader.readAsDataURL(file);
+        }),
+      }),
+    });
+    if (!response.ok) throw new Error("Upload failed");
+    return (await response.json()) as { upload: { name: string; mimeType: string; previewUrl: string; shareUrl: string; expiresAt: string } };
+  }
+
+  async function handleFileDrop(files: FileList | File[]) {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    try {
+      await prepareFiles(list);
+      for (const file of list) {
+        await uploadFile(file);
+      }
+      toast.success("Files attached and staged for chat sharing.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to stage files");
+    }
+  }
+
+  function markTyping(nextValue: string) {
+    setInput(nextValue);
+    if (typingTimerRef.current) {
+      window.clearTimeout(typingTimerRef.current);
+    }
+    void fetch("/api/chat/typing", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ conversationId: activeConversationId ?? null, typing: Boolean(nextValue.trim()) }),
+    });
+    typingTimerRef.current = window.setTimeout(() => {
+      void fetch("/api/chat/typing", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ conversationId: activeConversationId ?? null, typing: false }),
+      });
+    }, 600);
   }
 
   async function explainAssistantMessage(message: Message) {
@@ -581,11 +846,94 @@ export function AiChatDashboard({ user }: { user: User }) {
                 <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
                   Intent: {detectedIntent.replace("_", " ")}
                 </Badge>
+                <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                  Presence: {presence?.status ?? "offline"}
+                </Badge>
+                <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                  Latency: {analytics?.messageLatencyMs ?? 0}ms
+                </Badge>
+                <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                  Sentiment: {analytics?.sentimentScore ?? 0}
+                </Badge>
+                <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                  Churn risk: {analytics?.churnRisk ?? 0}
+                </Badge>
+                {typingUser ? (
+                  <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                    User is typing...
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search messages..."
+                  className="border-zinc-200 bg-white text-zinc-950 placeholder:text-zinc-400"
+                />
+                {searchResults.length > 0 ? (
+                  <div className="max-h-40 space-y-2 overflow-auto rounded-2xl border border-zinc-200 bg-zinc-50 p-2">
+                    {searchResults.map((result) => (
+                      <div key={result.messageId} className="rounded-xl border border-zinc-200 bg-white p-2">
+                        <p className="text-[11px] uppercase tracking-wide text-zinc-400">{result.conversationTitle ?? "Conversation"}</p>
+                        <p className="mt-1 text-sm text-zinc-800">{result.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <p className="text-[11px] text-zinc-500">
                 Use the menu to switch theme, model, and voice settings without leaving the canvas.
               </p>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => void fetch("/api/chat/presence", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "online" }) })}>
+                  Mark online
+                </Button>
+                <Button type="button" variant="outline" className="border-zinc-200 bg-white text-zinc-700" onClick={() => void fetch("/api/chat/presence", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "away" }) })}>
+                  Mark away
+                </Button>
+              </div>
+              <div className="rounded-2xl border border-zinc-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Notifications</p>
+                <div className="mt-2 space-y-2">
+                  {notifications.slice(0, 3).map((notification) => (
+                    <div key={notification.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-2">
+                      <p className="text-sm font-medium text-zinc-900">{notification.title}</p>
+                      <p className="text-xs text-zinc-500">{notification.body}</p>
+                    </div>
+                  ))}
+                  {notifications.length === 0 ? <p className="text-xs text-zinc-400">No unread alerts.</p> : null}
+                </div>
+              </div>
             </div>
+
+            {isAdmin ? (
+              <div className="grid gap-2 rounded-2xl border border-zinc-200 bg-white p-3 text-xs text-zinc-600">
+                <p className="font-semibold uppercase tracking-wide text-zinc-400">Admin moderation</p>
+                <Button
+                  variant="outline"
+                  className="border-zinc-200 bg-white text-zinc-700"
+                  onClick={async () => {
+                    const response = await fetch("/api/chat/admin", { cache: "no-store" });
+                    if (!response.ok) return;
+                    const payload = (await response.json()) as { auditLogs?: Array<{ id: string; action: string; targetType: string; targetId: string; detail: string; createdAt: string }> };
+                    setAdminAuditLogs(payload.auditLogs ?? []);
+                  }}
+                >
+                  Load audit logs
+                </Button>
+                <div className="space-y-2">
+                  {adminAuditLogs.slice(0, 3).map((log) => (
+                    <div key={log.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-2">
+                      <p className="text-sm font-medium text-zinc-900">{log.action}</p>
+                      <p className="text-xs text-zinc-500">
+                        {log.targetType} · {log.targetId}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <Button
               variant="outline"
@@ -628,6 +976,24 @@ export function AiChatDashboard({ user }: { user: User }) {
                         }`}
                       >
                         <p className="whitespace-pre-wrap">{message.content}</p>
+                        {message.attachments?.length ? (
+                          <div className="mt-2 space-y-1">
+                            {message.attachments.map((attachment) => (
+                              <div key={`${message.id}-${attachment.name}`} className="rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-[11px]">
+                                {attachment.name} · {attachment.mimeType}
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        <div className="mt-2 flex items-center gap-2 text-[11px] text-zinc-500">
+                          <span>{new Date(message.createdAt).toLocaleTimeString()}</span>
+                          {message.role === "user" ? (
+                            <span className="inline-flex items-center gap-1">
+                              {message.receipt?.readAt ? <CheckCheck className="size-3.5 text-emerald-500" /> : message.receipt?.deliveredAt ? <CheckCheck className="size-3.5 text-zinc-400" /> : <Check className="size-3.5 text-zinc-400" />}
+                              {message.receipt?.readAt ? "Read" : message.receipt?.deliveredAt ? "Delivered" : "Sent"}
+                            </span>
+                          ) : null}
+                        </div>
                         {message.role === "assistant" ? (
                           <button
                             type="button"
@@ -713,10 +1079,50 @@ export function AiChatDashboard({ user }: { user: User }) {
               </div>
             ) : null}
 
+            <div
+              className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                void handleFileDrop(event.dataTransfer.files);
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p>Drag and drop files here for previews and share links.</p>
+                <span className="rounded-full border border-zinc-200 bg-white px-2 py-1 text-[11px] text-zinc-700">
+                  {pendingFiles.length} file(s)
+                </span>
+                <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] text-zinc-700">
+                  <ImagePlus className="size-3.5" />
+                  Upload
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files;
+                      if (files) {
+                        void handleFileDrop(files);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+              {pendingPreviews.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {pendingPreviews.map((file) => (
+                    <span key={`${file.name}-${file.size}`} className="rounded-full border border-zinc-200 bg-white px-2 py-1 text-[11px] text-zinc-700">
+                      {file.name}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
             <div className="flex gap-2">
               <Input
                 value={input}
-                onChange={(event) => setInput(event.target.value)}
+                onChange={(event) => markTyping(event.target.value)}
                 placeholder="Ask anything..."
                 className="border-zinc-200 bg-white text-zinc-950 placeholder:text-zinc-400"
                 onKeyDown={(event) => {

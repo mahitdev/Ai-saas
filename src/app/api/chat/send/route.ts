@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { aiConversation, aiMessage } from "@/db/schema";
 import { generateAssistantReply } from "@/lib/server/ai";
+import { addAuditLog, addNotification, markMessageRead, markMessageSent, setPresence } from "@/lib/server/chat-realtime";
 import { getAuthenticatedUser, unauthorized } from "@/lib/server/session";
 
 const sendMessageSchema = z.object({
@@ -12,6 +13,16 @@ const sendMessageSchema = z.object({
   message: z.string().trim().min(1).max(4000),
   assistant: z.enum(["auto", "chatgpt", "gemini"]).optional(),
   imageDataUrl: z.string().max(3_000_000).optional(),
+  attachments: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(300),
+        mimeType: z.string().trim().min(1).max(120),
+        size: z.number().int().min(1).max(50_000_000),
+        url: z.string().trim().max(5000).optional(),
+      }),
+    )
+    .optional(),
 });
 
 function buildConversationTitle(message: string) {
@@ -59,9 +70,19 @@ export async function POST(request: Request) {
         conversationId,
         userId: user.id,
         role: "user",
-        content: parsed.data.message,
+        content: [
+          parsed.data.message,
+          parsed.data.attachments?.length
+            ? `Attachments:\n${parsed.data.attachments
+                .map((item) => `- ${item.name} (${item.mimeType}) ${item.url ? item.url : ""}`.trim())
+                .join("\n")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
       })
       .returning();
+    const userReceipt = markMessageSent(userMessage.id, user.id);
 
     const aiResult = await generateAssistantReply({
       userId: user.id,
@@ -81,6 +102,10 @@ export async function POST(request: Request) {
         content: aiResult.reply,
       })
       .returning();
+    const assistantReceipt = markMessageSent(assistantMessage.id, user.id);
+    markMessageRead(userMessage.id, user.id);
+    markMessageRead(assistantMessage.id, user.id);
+    setPresence(user.id, "online", conversationId, false);
 
     await db
       .update(aiConversation)
@@ -108,10 +133,43 @@ export async function POST(request: Request) {
       onboardingAha = `Value milestone reached: based on your first 3 prompts, your highest value path is ${focus}. Use a single file, MCP sync, or Workflow Builder to generate the next win.`;
     }
 
+    const mentions = /@[\w.-]+/.test(parsed.data.message);
+    const deadline = /\b(deadline|due|tomorrow|today|urgent)\b/i.test(parsed.data.message);
+    if (mentions || deadline) {
+      addNotification(user.id, {
+        kind: mentions ? "mention" : "deadline",
+        title: mentions ? "Mention detected" : "Deadline reminder",
+        body: mentions
+          ? "A message mention was detected. The notification center is ready to notify collaborators."
+          : "A deadline-sensitive message was detected. Review the workspace actions and follow-ups.",
+        conversationId,
+        messageId: userMessage.id,
+      });
+    }
+    if (/ignore previous|system prompt|jailbreak|bypass|override rules/i.test(parsed.data.message)) {
+      addNotification(user.id, {
+        kind: "security",
+        title: "Prompt injection warning",
+        body: "The latest message matched a high-risk safety pattern and was flagged for review.",
+        conversationId,
+        messageId: userMessage.id,
+      });
+      addAuditLog(user.id, {
+        action: "flag_message",
+        targetType: "message",
+        targetId: userMessage.id,
+        detail: "Safety gateway detected a possible prompt injection attempt.",
+      });
+    }
+
     return NextResponse.json({
       conversationId,
       userMessage,
       assistantMessage,
+      receipts: {
+        user: userReceipt,
+        assistant: assistantReceipt,
+      },
       memorySummary: aiResult.memorySummary,
       metadata: aiResult.metadata ?? null,
       onboardingAha,
