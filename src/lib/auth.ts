@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { genericOAuth, multiSession, twoFactor } from "better-auth/plugins";
+import { genericOAuth, multiSession } from "better-auth/plugins";
 import { passkey } from "better-auth/plugins/passkey";
 
 import { db } from "@/db";
@@ -15,18 +15,6 @@ const authPlugins = [
   asPlugin(
     multiSession(Number.isFinite(sessionMaximum) ? { maximumSessions: sessionMaximum } : { maximumSessions: 8 }),
   ),
-  asPlugin(twoFactor({
-    issuer: env.AUTH_TWO_FACTOR_ISSUER || "AI Agent",
-    backupCodeOptions: { amount: 8, length: 10 },
-    totpOptions: {
-      period: 30,
-    },
-    otpOptions: {
-      sendOTP: async ({ user, otp }) => {
-        console.info(`[auth] OTP for ${user.email}: ${otp}`);
-      },
-    },
-  })),
   asPlugin(passkey({
     rpName: "AI Agent",
     rpID: new URL(env.BETTER_AUTH_URL).hostname,
