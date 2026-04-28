@@ -284,17 +284,17 @@ export function ModelLabPage() {
                   </div>
                 ) : predictedLayout === "code" ? (
                   <div className="mt-4 rounded-lg border border-slate-700 bg-slate-950 p-4 font-mono text-xs text-slate-200">
-                    <p className="text-cyan-300">// IDE mode</p>
-                    <p className="mt-2">const workflow = await agent.run({"{"} intent: "build" {"}"});</p>
-                    <p>workflow.on("checkpoint", approve);</p>
-                    <p>workflow.on("handoff", traceStep);</p>
+                    <p className="text-cyan-300">{`// IDE mode`}</p>
+                    <p className="mt-2">{`const workflow = await agent.run({ intent: "build" });`}</p>
+                    <p>{`workflow.on("checkpoint", approve);`}</p>
+                    <p>{`workflow.on("handoff", traceStep);`}</p>
                   </div>
                 ) : predictedLayout === "docs" ? (
                   <div className="mt-4 space-y-2 rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200">
                     <p className="font-semibold text-cyan-200">Document Review</p>
-                    <p>• Extract policy requirements</p>
-                    <p>• Flag gaps and exceptions</p>
-                    <p>• Produce a clean summary and action list</p>
+                    <p>&bull; Extract policy requirements</p>
+                    <p>&bull; Flag gaps and exceptions</p>
+                    <p>&bull; Produce a clean summary and action list</p>
                   </div>
                 ) : (
                   <div className="mt-4 space-y-2 rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200">

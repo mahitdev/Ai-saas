@@ -9,9 +9,13 @@ import { env } from "@/lib/env";
 
 const sessionMaximum = Number.parseInt(env.AUTH_SESSION_MAXIMUM ?? "", 10);
 
-const authPlugins: any[] = [
-  multiSession(Number.isFinite(sessionMaximum) ? { maximumSessions: sessionMaximum } : { maximumSessions: 8 }),
-  twoFactor({
+const asPlugin = <T>(plugin: T) => plugin as unknown as import("better-auth").BetterAuthPlugin;
+
+const authPlugins = [
+  asPlugin(
+    multiSession(Number.isFinite(sessionMaximum) ? { maximumSessions: sessionMaximum } : { maximumSessions: 8 }),
+  ),
+  asPlugin(twoFactor({
     issuer: env.AUTH_TWO_FACTOR_ISSUER || "AI Agent",
     backupCodeOptions: { amount: 8, length: 10 },
     totpOptions: {
@@ -22,17 +26,17 @@ const authPlugins: any[] = [
         console.info(`[auth] OTP for ${user.email}: ${otp}`);
       },
     },
-  }),
-  passkey({
+  })),
+  asPlugin(passkey({
     rpName: "AI Agent",
     rpID: new URL(env.BETTER_AUTH_URL).hostname,
     origin: env.BETTER_AUTH_URL,
-  }),
+  })),
 ];
 
 if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
   authPlugins.push(
-    genericOAuth({
+    asPlugin(genericOAuth({
       config: [
         {
           providerId: "google",
@@ -42,13 +46,13 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
           pkce: true,
         },
       ],
-    }),
+    })),
   );
 }
 
 if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
   authPlugins.push(
-    genericOAuth({
+    asPlugin(genericOAuth({
       config: [
         {
           providerId: "github",
@@ -60,13 +64,13 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
           scopes: ["read:user", "user:email"],
         },
       ],
-    }),
+    })),
   );
 }
 
 if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET) {
   authPlugins.push(
-    genericOAuth({
+    asPlugin(genericOAuth({
       config: [
         {
           providerId: "microsoft",
@@ -79,7 +83,7 @@ if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET) {
           scopes: ["openid", "profile", "email", "User.Read"],
         },
       ],
-    }),
+    })),
   );
 }
 
@@ -89,7 +93,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  plugins: authPlugins as any,
+  plugins: authPlugins,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {

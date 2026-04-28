@@ -279,7 +279,9 @@ export function AnalyticsPage() {
                     Created task: {systemRun.executedTask.title} in project {systemRun.activeProject?.name ?? systemRun.executedTask.projectId}
                   </p>
                 ) : (
-                  <p className="text-slate-400">No task created yet. Run with "Analyze + Create Task" to apply the result.</p>
+                  <p className="text-slate-400">
+                    No task created yet. Run with &quot;Analyze + Create Task&quot; to apply the result.
+                  </p>
                 )}
               </div>
             ) : null}
