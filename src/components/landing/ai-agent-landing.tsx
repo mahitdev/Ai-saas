@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentProps, ReactNode, RefObject } from "react";
+import type { ComponentProps, RefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -270,38 +270,41 @@ function BackgroundScene({ pointer, scrollProgress }: { pointer: PointerState; s
           transform: `translate3d(${sceneX}px, ${sceneY}px, 0)`,
         }}
       >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(67,255,47,0.08),transparent_26%),radial-gradient(circle_at_12%_74%,rgba(255,255,255,0.04),transparent_18%),radial-gradient(circle_at_88%_76%,rgba(67,255,47,0.06),transparent_18%)]" />
         <div
           className="absolute inset-0"
           style={{
-            background: `radial-gradient(circle at 50% ${15 + scrollProgress * 8}%, rgba(67, 255, 47, 0.18), transparent ${glowShift}%), radial-gradient(circle at 18% 18%, rgba(57, 214, 255, 0.12), transparent 20%), radial-gradient(circle at 82% 24%, rgba(139, 92, 246, 0.15), transparent 18%), linear-gradient(180deg, rgba(2, 6, 23, 0.02), rgba(2, 6, 23, 0.5) 62%, rgba(0, 0, 0, 0.9))`,
+            background: `radial-gradient(circle at 50% ${15 + scrollProgress * 8}%, rgba(67, 255, 47, 0.26), transparent ${glowShift}%), radial-gradient(circle at 18% 18%, rgba(67, 255, 47, 0.14), transparent 18%), radial-gradient(circle at 82% 24%, rgba(255, 255, 255, 0.05), transparent 18%), linear-gradient(180deg, rgba(2, 6, 23, 0.02), rgba(2, 6, 23, 0.4) 56%, rgba(0, 0, 0, 0.95))`,
           }}
         />
 
         <div
-          className="absolute inset-x-[-14%] top-[12%] h-[66vh] opacity-60"
+          className="absolute inset-x-[-18%] top-[8%] h-[72vh] opacity-80"
           style={{
-            transform: `perspective(1600px) translateY(${horizonShift}px) rotateX(72deg) rotateZ(-6deg)`,
+            transform: `perspective(1600px) translateY(${horizonShift}px) rotateX(74deg) rotateZ(-8deg) scale(1.08)`,
           }}
         >
-          <div className="absolute inset-0 rounded-[50%] border border-[#43ff2f]/14 bg-[radial-gradient(circle,rgba(67,255,47,0.08),transparent_58%)] shadow-[0_0_140px_rgba(67,255,47,0.08)]" />
-          <div className="absolute inset-6 rounded-[50%] border border-white/8 opacity-55" />
+          <div className="absolute inset-0 rounded-[50%] border border-[#43ff2f]/20 bg-[radial-gradient(circle,rgba(67,255,47,0.12),transparent_54%)] shadow-[0_0_180px_rgba(67,255,47,0.12)]" />
+          <div className="absolute inset-4 rounded-[50%] border border-white/10 opacity-60" />
           <div
-            className="absolute inset-10 rounded-[50%] opacity-55"
+            className="absolute inset-8 rounded-[50%] opacity-70"
             style={{
               backgroundImage:
-                "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
-              backgroundSize: "54px 54px",
-              maskImage: "radial-gradient(circle, rgba(0,0,0,0.95), transparent 72%)",
+                "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+              backgroundSize: "48px 48px",
+              maskImage: "radial-gradient(circle, rgba(0,0,0,0.96), transparent 70%)",
             }}
           />
+          <div className="absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#43ff2f]/14 bg-[radial-gradient(circle,rgba(67,255,47,0.24),rgba(67,255,47,0.06)_38%,transparent_72%)] blur-[24px] animate-[softPulse_10s_ease-in-out_infinite]" />
         </div>
 
-        <div className="absolute left-[9%] top-[18%] size-28 rounded-full border border-[#43ff2f]/20 bg-[radial-gradient(circle,rgba(67,255,47,0.22),rgba(67,255,47,0.05)_55%,transparent_75%)] blur-[2px] animate-[orbitSlow_28s_linear_infinite]" />
-        <div className="absolute right-[10%] top-[22%] size-36 rounded-full border border-white/10 bg-[radial-gradient(circle,rgba(57,214,255,0.2),rgba(57,214,255,0.04)_55%,transparent_74%)] blur-[1px] animate-[orbitSlow_36s_linear_infinite_reverse]" />
-        <div className="absolute left-[52%] top-[10%] h-40 w-40 -translate-x-1/2 rounded-full border border-[#8bff72]/16 bg-[conic-gradient(from_0deg,rgba(67,255,47,0.02),rgba(67,255,47,0.34),rgba(255,255,255,0.04),rgba(139,92,246,0.3),rgba(67,255,47,0.02))] blur-[36px] animate-[softPulse_10s_ease-in-out_infinite]" />
-        <div className="absolute left-1/2 top-[58%] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full border border-[#43ff2f]/10 bg-[radial-gradient(circle,rgba(67,255,47,0.08),rgba(67,255,47,0.02)_46%,transparent_74%)] blur-[8px] animate-[hoverDrift_16s_ease-in-out_infinite]" />
+        <div className="absolute left-[6%] top-[18%] size-32 rounded-full border border-[#43ff2f]/26 bg-[radial-gradient(circle,rgba(67,255,47,0.3),rgba(67,255,47,0.08)_52%,transparent_76%)] blur-[3px] animate-[orbitSlow_28s_linear_infinite]" />
+        <div className="absolute right-[10%] top-[14%] size-40 rounded-full border border-white/12 bg-[radial-gradient(circle,rgba(255,255,255,0.16),rgba(255,255,255,0.05)_56%,transparent_74%)] blur-[1px] animate-[orbitSlow_36s_linear_infinite_reverse]" />
+        <div className="absolute left-[48%] top-[9%] h-44 w-44 -translate-x-1/2 rounded-full border border-[#43ff2f]/18 bg-[conic-gradient(from_0deg,rgba(67,255,47,0.04),rgba(67,255,47,0.38),rgba(255,255,255,0.05),rgba(67,255,47,0.2),rgba(67,255,47,0.04))] blur-[44px] animate-[softPulse_10s_ease-in-out_infinite]" />
+        <div className="absolute left-[12%] top-[62%] h-[24rem] w-[24rem] rounded-full border border-[#43ff2f]/12 bg-[radial-gradient(circle,rgba(67,255,47,0.2),rgba(67,255,47,0.04)_42%,transparent_74%)] blur-[14px] animate-[hoverDrift_16s_ease-in-out_infinite]" />
+        <div className="absolute right-[14%] top-[58%] h-[22rem] w-[22rem] rounded-full border border-white/10 bg-[radial-gradient(circle,rgba(255,255,255,0.12),rgba(255,255,255,0.03)_42%,transparent_74%)] blur-[18px] animate-[hoverDrift_20s_ease-in-out_infinite]" />
 
-        <div className="absolute inset-x-0 bottom-[-8vh] h-[44vh] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.26)_18%,rgba(0,0,0,0.86)_78%)]" />
+        <div className="absolute inset-x-0 bottom-[-8vh] h-[44vh] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.12)_18%,rgba(0,0,0,0.9)_78%)]" />
       </div>
     </div>
   );
@@ -350,7 +353,7 @@ export function AiAgentLanding() {
   );
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-black text-white">
+    <main className="relative min-h-screen overflow-hidden bg-[#020203] text-white">
       <BackgroundScene pointer={pointer} scrollProgress={scrollProgress} />
 
       <div className="fixed left-3 top-1/2 z-30 hidden -translate-y-1/2 lg:flex">
@@ -372,9 +375,9 @@ export function AiAgentLanding() {
         </div>
       </div>
 
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(67,255,47,0.14),transparent_18%),radial-gradient(circle_at_15%_22%,rgba(67,255,47,0.1),transparent_22%),radial-gradient(circle_at_85%_25%,rgba(255,255,255,0.05),transparent_18%)]" />
-      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.03)_1px),linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.03)_1px)] bg-[size:24px_24px] opacity-35" />
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_20%,transparent_0%,rgba(0,0,0,0.25)_55%,rgba(0,0,0,0.72)_100%)]" />
+      <div className="pointer-events-none fixed inset-0 animate-[sceneShift_24s_ease-in-out_infinite] bg-[radial-gradient(circle_at_50%_0%,rgba(67,255,47,0.16),transparent_18%),radial-gradient(circle_at_15%_22%,rgba(67,255,47,0.11),transparent_22%),radial-gradient(circle_at_85%_25%,rgba(255,255,255,0.05),transparent_18%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.035)_1px),linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.035)_1px)] bg-[size:22px_22px] opacity-28" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_20%,transparent_0%,rgba(0,0,0,0.18)_52%,rgba(0,0,0,0.84)_100%)]" />
 
       <div className="relative mx-auto max-w-[1480px] px-3 py-3 sm:px-4 lg:px-6">
         <header className="sticky top-3 z-40 rounded-[1.25rem] border border-white/8 bg-black/65 px-4 py-3 backdrop-blur-xl">
@@ -559,6 +562,22 @@ export function AiAgentLanding() {
           }
           50% {
             transform: translateX(-50%) translateY(-14px);
+          }
+        }
+
+        @keyframes sceneShift {
+          0%,
+          100% {
+            background-position:
+              0% 0%,
+              100% 0%,
+              50% 100%;
+          }
+          50% {
+            background-position:
+              12% 8%,
+              88% 12%,
+              52% 100%;
           }
         }
       `}</style>
