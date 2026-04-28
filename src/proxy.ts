@@ -72,7 +72,7 @@ function isMutation(method: string) {
   return method === "POST" || method === "PATCH" || method === "PUT" || method === "DELETE";
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
   const isAuthApi = request.nextUrl.pathname.startsWith("/api/auth/");
 
