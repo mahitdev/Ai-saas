@@ -256,6 +256,57 @@ function HeroCanvas({ pointer }: { pointer: PointerState }) {
   );
 }
 
+function BackgroundScene({ pointer, scrollProgress }: { pointer: PointerState; scrollProgress: number }) {
+  const sceneX = pointer.active ? (pointer.x - 50) * 0.28 : 0;
+  const sceneY = pointer.active ? (pointer.y - 50) * 0.22 : 0;
+  const horizonShift = (scrollProgress - 0.5) * 14;
+  const glowShift = 20 + scrollProgress * 12;
+
+  return (
+    <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div
+        className="absolute inset-0 opacity-90 transition-transform duration-300 ease-out"
+        style={{
+          transform: `translate3d(${sceneX}px, ${sceneY}px, 0)`,
+        }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(circle at 50% ${15 + scrollProgress * 8}%, rgba(67, 255, 47, 0.18), transparent ${glowShift}%), radial-gradient(circle at 18% 18%, rgba(57, 214, 255, 0.12), transparent 20%), radial-gradient(circle at 82% 24%, rgba(139, 92, 246, 0.15), transparent 18%), linear-gradient(180deg, rgba(2, 6, 23, 0.02), rgba(2, 6, 23, 0.5) 62%, rgba(0, 0, 0, 0.9))`,
+          }}
+        />
+
+        <div
+          className="absolute inset-x-[-14%] top-[12%] h-[66vh] opacity-60"
+          style={{
+            transform: `perspective(1600px) translateY(${horizonShift}px) rotateX(72deg) rotateZ(-6deg)`,
+          }}
+        >
+          <div className="absolute inset-0 rounded-[50%] border border-[#43ff2f]/14 bg-[radial-gradient(circle,rgba(67,255,47,0.08),transparent_58%)] shadow-[0_0_140px_rgba(67,255,47,0.08)]" />
+          <div className="absolute inset-6 rounded-[50%] border border-white/8 opacity-55" />
+          <div
+            className="absolute inset-10 rounded-[50%] opacity-55"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
+              backgroundSize: "54px 54px",
+              maskImage: "radial-gradient(circle, rgba(0,0,0,0.95), transparent 72%)",
+            }}
+          />
+        </div>
+
+        <div className="absolute left-[9%] top-[18%] size-28 rounded-full border border-[#43ff2f]/20 bg-[radial-gradient(circle,rgba(67,255,47,0.22),rgba(67,255,47,0.05)_55%,transparent_75%)] blur-[2px] animate-[orbitSlow_28s_linear_infinite]" />
+        <div className="absolute right-[10%] top-[22%] size-36 rounded-full border border-white/10 bg-[radial-gradient(circle,rgba(57,214,255,0.2),rgba(57,214,255,0.04)_55%,transparent_74%)] blur-[1px] animate-[orbitSlow_36s_linear_infinite_reverse]" />
+        <div className="absolute left-[52%] top-[10%] h-40 w-40 -translate-x-1/2 rounded-full border border-[#8bff72]/16 bg-[conic-gradient(from_0deg,rgba(67,255,47,0.02),rgba(67,255,47,0.34),rgba(255,255,255,0.04),rgba(139,92,246,0.3),rgba(67,255,47,0.02))] blur-[36px] animate-[softPulse_10s_ease-in-out_infinite]" />
+        <div className="absolute left-1/2 top-[58%] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full border border-[#43ff2f]/10 bg-[radial-gradient(circle,rgba(67,255,47,0.08),rgba(67,255,47,0.02)_46%,transparent_74%)] blur-[8px] animate-[hoverDrift_16s_ease-in-out_infinite]" />
+
+        <div className="absolute inset-x-0 bottom-[-8vh] h-[44vh] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.26)_18%,rgba(0,0,0,0.86)_78%)]" />
+      </div>
+    </div>
+  );
+}
+
 export function AiAgentLanding() {
   const [pointer, setPointer] = useState<PointerState>({ x: 50, y: 45, active: false });
   const heroRef = useRef<HTMLDivElement | null>(null);
@@ -300,6 +351,8 @@ export function AiAgentLanding() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
+      <BackgroundScene pointer={pointer} scrollProgress={scrollProgress} />
+
       <div className="fixed left-3 top-1/2 z-30 hidden -translate-y-1/2 lg:flex">
         <div className="flex flex-col gap-2 rounded-[1.75rem] border border-white/10 bg-black/70 p-2 backdrop-blur-xl">
           {[Bot, Workflow, Cpu, Lock, Sparkles].map((Icon, index) => (
@@ -472,6 +525,40 @@ export function AiAgentLanding() {
           }
           50% {
             transform: translateY(-8px);
+          }
+        }
+
+        @keyframes orbitSlow {
+          0% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          50% {
+            transform: translate3d(24px, -18px, 0) scale(1.08);
+          }
+          100% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+
+        @keyframes softPulse {
+          0%,
+          100% {
+            opacity: 0.42;
+            transform: translateX(-50%) scale(1);
+          }
+          50% {
+            opacity: 0.76;
+            transform: translateX(-50%) scale(1.07);
+          }
+        }
+
+        @keyframes hoverDrift {
+          0%,
+          100% {
+            transform: translateX(-50%) translateY(0px);
+          }
+          50% {
+            transform: translateX(-50%) translateY(-14px);
           }
         }
       `}</style>
