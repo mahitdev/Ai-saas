@@ -313,4 +313,48 @@
     pointer-events: none;
     opacity: 0.55;
   }
+
+  .dashboard-surface {
+    color-scheme: dark;
+    background:
+      radial-gradient(circle at 12% 12%, rgba(67, 255, 47, 0.08), transparent 20%),
+      radial-gradient(circle at 88% 16%, rgba(99, 102, 241, 0.08), transparent 18%),
+      linear-gradient(180deg, #02040a 0%, #040814 42%, #02040a 100%);
+  }
+
+  .dashboard-surface :where([class*="bg-white"], [class*="bg-zinc-50"], [class*="bg-neutral-50"], [class*="bg-slate-50"], [class*="bg-zinc-100"], [class*="bg-slate-100"]) {
+    background-color: rgb(9 12 20 / 0.96) !important;
+  }
+
+  .dashboard-surface :where([class*="bg-white/"], [class*="bg-zinc-50/"], [class*="bg-neutral-50/"], [class*="bg-slate-50/"], [class*="bg-zinc-100/"], [class*="bg-slate-100/"]) {
+    background-color: rgb(9 12 20 / 0.9) !important;
+  }
+
+  .dashboard-surface :where([class*="border-zinc-200"], [class*="border-slate-200"], [class*="border-neutral-200"]) {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .dashboard-surface :where([class*="text-zinc-950"], [class*="text-slate-950"], [class*="text-neutral-950"]) {
+    color: rgb(248 250 252) !important;
+  }
+
+  .dashboard-surface :where([class*="text-zinc-900"], [class*="text-slate-900"], [class*="text-neutral-900"]) {
+    color: rgb(241 245 249) !important;
+  }
+
+  .dashboard-surface :where([class*="text-zinc-800"], [class*="text-slate-800"], [class*="text-neutral-800"]) {
+    color: rgb(226 232 240) !important;
+  }
+
+  .dashboard-surface :where([class*="text-zinc-700"], [class*="text-slate-700"], [class*="text-neutral-700"]) {
+    color: rgb(203 213 225) !important;
+  }
+
+  .dashboard-surface :where([class*="text-zinc-600"], [class*="text-slate-600"], [class*="text-neutral-600"]) {
+    color: rgb(148 163 184) !important;
+  }
+
+  .dashboard-surface :where([class*="text-zinc-500"], [class*="text-slate-500"], [class*="text-neutral-500"]) {
+    color: rgb(100 116 139) !important;
+  }
 }

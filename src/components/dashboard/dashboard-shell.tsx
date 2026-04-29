@@ -66,7 +66,7 @@ export function DashboardShell({ displayName, children }: DashboardShellProps) {
   }
 
   return (
-    <div className="min-h-svh bg-neutral-50 text-zinc-950">
+    <div className="dashboard-surface min-h-svh bg-neutral-50 text-zinc-950">
       <aside
         className={cn(
           "fixed inset-x-0 top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-xl md:inset-y-0 md:left-0 md:right-auto md:border-b-0 md:border-r",
