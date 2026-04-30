@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "FocusForge",
-    short_name: "FocusForge",
+    name: "Logicra",
+    short_name: "Logicra",
     description: "AI chat platform with retention, trust, and growth controls.",
     start_url: "/",
     display: "standalone",

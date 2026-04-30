@@ -190,7 +190,7 @@ export function AccountPage() {
     const response = await fetch("/api/auth/two-factor/enable", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ password: totpPassword.trim(), issuer: "FocusForge" }),
+      body: JSON.stringify({ password: totpPassword.trim(), issuer: "Logicra" }),
     });
     if (response.ok) {
       toast.success("Two-factor authentication enabled.");

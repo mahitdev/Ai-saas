@@ -135,7 +135,7 @@ function HeroCanvas({ pointer }: { pointer: PointerState }) {
           </div>
 
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.32em] text-white/30">FocusForge Interactive Landing</p>
+            <p className="text-xs uppercase tracking-[0.32em] text-white/30">Logicra Interactive Landing</p>
             <h1 className="max-w-3xl text-balance text-[clamp(3.1rem,8vw,6.9rem)] font-semibold tracking-[-0.08em] text-white leading-[0.92]">
               AI infrastructure that
               <span className="block text-[#43ff2f]">developers love.</span>
@@ -189,7 +189,7 @@ function HeroCanvas({ pointer }: { pointer: PointerState }) {
                       <Bot className="size-4" />
                     </div>
                     <div>
-                      <p className="text-xs uppercase tracking-[0.28em] text-white/40">FocusForge</p>
+                      <p className="text-xs uppercase tracking-[0.28em] text-white/40">Logicra</p>
                       <p className="text-sm font-semibold text-white">Live control panel</p>
                     </div>
                   </div>
@@ -386,7 +386,7 @@ export function AiAgentLanding() {
               <div className="grid size-8 place-items-center rounded-xl bg-[#43ff2f] text-black shadow-[0_0_18px_rgba(67,255,47,0.55)]">
                 <Bot className="size-4" />
               </div>
-              <span>FocusForge</span>
+              <span>Logicra</span>
             </Link>
 
             <nav className="hidden flex-1 items-center justify-center gap-8 text-sm text-white/55 md:flex">
@@ -415,7 +415,7 @@ export function AiAgentLanding() {
           <div className="flex items-start justify-between gap-3 pb-5 text-xs text-white/45">
             <span className="inline-flex items-center gap-2">
               <span className="size-1.5 rounded-full bg-[#43ff2f] shadow-[0_0_10px_rgba(67,255,47,0.95)]" />
-              FocusForge Interactive Landing
+              Logicra Interactive Landing
             </span>
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-white/55">
               {scrollProgress > 0.75 ? "3.5" : "Live"}
@@ -485,7 +485,7 @@ export function AiAgentLanding() {
             <p className="text-xs uppercase tracking-[0.32em] text-[#a9ff93]">Outcome</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em] sm:text-3xl">A premium surface for real work, not just demos.</h2>
             <p className="mt-4 text-sm leading-7 text-white/66">
-              FocusForge blends orchestration, MCP context, analytics, and desktop bridges into one calm system that feels fast on desktop and focused on mobile.
+              Logicra blends orchestration, MCP context, analytics, and desktop bridges into one calm system that feels fast on desktop and focused on mobile.
             </p>
             <div className="mt-6 space-y-3">
               <div className="rounded-[1.1rem] border border-white/10 bg-black/35 px-4 py-3 text-sm text-white/72">Live analysis stream</div>

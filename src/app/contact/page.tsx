@@ -24,7 +24,7 @@ export default function ContactPage() {
               <MessageCircleHeart className="size-3.5" />
               Contact & Collaboration
             </div>
-            <CardTitle className="text-3xl text-slate-100 md:text-4xl">Need help with FocusForge?</CardTitle>
+            <CardTitle className="text-3xl text-slate-100 md:text-4xl">Need help with Logicra?</CardTitle>
             <CardDescription className="text-slate-400">
               For setup help, product questions, feedback, or support, reach out directly by email.
             </CardDescription>

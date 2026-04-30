@@ -41,7 +41,7 @@ export default function ResetPasswordPage() {
     <Card className="border-border/60 bg-background/90 shadow-lg backdrop-blur">
       <CardHeader>
         <CardTitle>Reset password</CardTitle>
-        <CardDescription>Create a new password for your FocusForge account.</CardDescription>
+        <CardDescription>Create a new password for your Logicra account.</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={onSubmit}>

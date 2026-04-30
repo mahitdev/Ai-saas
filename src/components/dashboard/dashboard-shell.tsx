@@ -79,7 +79,7 @@ export function DashboardShell({ displayName, children }: DashboardShellProps) {
               <Bot className="size-5" />
             </div>
             <div className={cn("min-w-0 transition-all", collapsed ? "md:hidden" : "md:block")}>
-              <p className="text-sm font-semibold tracking-tight">FocusForge</p>
+              <p className="text-sm font-semibold tracking-tight">Logicra</p>
               <p className="text-xs text-zinc-500">Workspace</p>
             </div>
           </div>
@@ -146,7 +146,7 @@ export function DashboardShell({ displayName, children }: DashboardShellProps) {
         <div className="border-b border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur md:hidden">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold tracking-tight">FocusForge</p>
+              <p className="text-sm font-semibold tracking-tight">Logicra</p>
               <p className="text-xs text-zinc-500">Signed in as {displayName}</p>
             </div>
             <Button

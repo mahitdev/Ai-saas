@@ -1,4 +1,4 @@
-# FocusForge Backend
+# Logicra Backend
 
 This project now includes:
 
