@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Agent",
+  title: "FocusForge",
   description: "A structured AI workspace for chat, memory, tasks, and trusted automation.",
 };
 

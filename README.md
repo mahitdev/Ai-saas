@@ -1,4 +1,4 @@
-# AI Agent Backend
+# FocusForge Backend
 
 This project now includes:
 

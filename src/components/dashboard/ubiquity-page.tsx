@@ -27,11 +27,11 @@ export function UbiquityPage() {
     note?: string;
   } | null>(null);
   const [botPlatform, setBotPlatform] = useState<BotPlatform>("slack");
-  const [botMessage, setBotMessage] = useState("@AI Agent summarize this chat thread");
+  const [botMessage, setBotMessage] = useState("@FocusForge summarize this chat thread");
   const [botReply, setBotReply] = useState("");
   const [command, setCommand] = useState("");
   const [commandOutput, setCommandOutput] = useState("");
-  const [pageTitle, setPageTitle] = useState("AI Agent dashboard");
+  const [pageTitle, setPageTitle] = useState("FocusForge dashboard");
   const [pageUrl, setPageUrl] = useState("https://app.example.com/dashboard/chat");
   const [highlightedText, setHighlightedText] = useState("Summarize this conversation and capture the next action items.");
   const [contextHelp, setContextHelp] = useState("");
@@ -183,9 +183,9 @@ export function UbiquityPage() {
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <Card className="border-slate-700/70 bg-slate-950/80">
           <CardHeader>
-            <CardTitle>AI Agent Everywhere</CardTitle>
+            <CardTitle>FocusForge Everywhere</CardTitle>
             <CardDescription className="text-slate-400">
-              Entry points across browser, desktop, IDE, and team chat so users can trigger AI Agent anywhere.
+              Entry points across browser, desktop, IDE, and team chat so users can trigger FocusForge anywhere.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 text-xs text-slate-300">
@@ -200,7 +200,7 @@ export function UbiquityPage() {
             <CardHeader>
               <CardTitle>Chrome/Edge Extension</CardTitle>
               <CardDescription className="text-slate-400">
-                Highlight text on any site and send it to AI Agent for analysis.
+                Highlight text on any site and send it to FocusForge for analysis.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-slate-300">
@@ -208,7 +208,7 @@ export function UbiquityPage() {
               <p>
                 Load via <code>chrome://extensions</code> {"->"} Developer Mode {"->"} Load unpacked.
               </p>
-              <p>Context-menu action: &quot;Send to AI Agent&quot;.</p>
+              <p>Context-menu action: &quot;Send to FocusForge&quot;.</p>
             </CardContent>
           </Card>
 

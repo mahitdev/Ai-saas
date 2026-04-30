@@ -276,7 +276,7 @@ export function ModelLabPage() {
                     {["Invoice 1482", "Budget Review", "Forecast Check"].map((row, index) => (
                       <div key={row} className="grid grid-cols-4 bg-slate-900/60 text-sm text-slate-200">
                         <div className="border-t border-r border-slate-700 p-2">{row}</div>
-                        <div className="border-t border-r border-slate-700 p-2">AI Agent</div>
+                        <div className="border-t border-r border-slate-700 p-2">FocusForge</div>
                         <div className="border-t border-r border-slate-700 p-2">{index === 0 ? "Ready" : "Queued"}</div>
                         <div className="border-t border-slate-700 p-2">{index + 1}x</div>
                       </div>

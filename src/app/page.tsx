@@ -5,7 +5,7 @@ import { AiAgentLanding } from "@/components/landing/ai-agent-landing";
 import { getServerSession } from "@/lib/server/session";
 
 export const metadata: Metadata = {
-  title: "AI Agent",
+  title: "FocusForge",
   description: "Discipline your time. Own your future.",
 };
 
