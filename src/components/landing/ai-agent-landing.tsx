@@ -152,8 +152,9 @@ function HeroCanvas({ pointer }: { pointer: PointerState }) {
             <Button
               variant="outline"
               className="rounded-full border-white/10 bg-white/[0.04] px-7 py-6 text-sm font-semibold text-white/85 shadow-none hover:bg-white/[0.07] hover:text-white"
+              asChild
             >
-              Contact Sales
+              <Link href="/contact">Contact Sales</Link>
             </Button>
           </div>
 
@@ -351,6 +352,49 @@ export function AiAgentLanding() {
     ],
     [],
   );
+  const railItems = useMemo(
+    () => [
+      { id: "hero", label: "Overview", icon: Bot },
+      { id: "features", label: "Features", icon: Workflow },
+      { id: "stack", label: "Live stack", icon: Cpu },
+      { id: "pricing", label: "Pricing", icon: Lock },
+      { id: "workspace", label: "Open workspace", icon: Sparkles, href: "/dashboard/chat" },
+    ],
+    [],
+  );
+  const [activeRailItem, setActiveRailItem] = useState("hero");
+
+  useEffect(() => {
+    const sectionIds = railItems.filter((item) => !item.href).map((item) => item.id);
+
+    const updateActiveSection = () => {
+      const current = sectionIds.reduce(
+        (closest, id) => {
+          const element = document.getElementById(id);
+          if (!element) return closest;
+          const distance = Math.abs(element.getBoundingClientRect().top - 120);
+          return distance < closest.distance ? { id, distance } : closest;
+        },
+        { id: "hero", distance: Number.POSITIVE_INFINITY },
+      );
+
+      setActiveRailItem(current.id);
+    };
+
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
+
+    return () => {
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+    };
+  }, [railItems]);
+
+  function scrollToSection(id: string) {
+    setActiveRailItem(id);
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#020203] text-white">
@@ -358,20 +402,37 @@ export function AiAgentLanding() {
 
       <div className="fixed left-3 top-1/2 z-30 hidden -translate-y-1/2 lg:flex">
         <div className="flex flex-col gap-2 rounded-[1.75rem] border border-white/10 bg-black/70 p-2 backdrop-blur-xl">
-          {[Bot, Workflow, Cpu, Lock, Sparkles].map((Icon, index) => (
-            <button
-              key={index}
-              type="button"
-              className={cn(
-                "grid size-10 place-items-center rounded-2xl border transition-colors",
-                index === 0
-                  ? "border-[#43ff2f]/35 bg-[#43ff2f]/12 text-[#8bff72]"
-                  : "border-white/8 bg-white/[0.03] text-white/55 hover:border-[#43ff2f]/25 hover:bg-[#43ff2f]/10 hover:text-[#a9ff93]",
-              )}
-            >
-              <Icon className="size-4" />
-            </button>
-          ))}
+          {railItems.map(({ id, label, icon: Icon, href }) => {
+            const isActive = activeRailItem === id;
+            const className = cn(
+              "grid size-10 place-items-center rounded-2xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#43ff2f]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+              isActive
+                ? "border-[#43ff2f]/35 bg-[#43ff2f]/12 text-[#8bff72]"
+                : "border-white/8 bg-white/[0.03] text-white/55 hover:border-[#43ff2f]/25 hover:bg-[#43ff2f]/10 hover:text-[#a9ff93]",
+            );
+
+            if (href) {
+              return (
+                <Link key={id} href={href} aria-label={label} title={label} className={className}>
+                  <Icon className="size-4" />
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-label={label}
+                aria-current={isActive ? "true" : undefined}
+                title={label}
+                onClick={() => scrollToSection(id)}
+                className={className}
+              >
+                <Icon className="size-4" />
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -409,6 +470,7 @@ export function AiAgentLanding() {
         </header>
 
         <section
+          id="hero"
           ref={heroRef}
           className="relative mx-auto mt-4 overflow-hidden rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] px-4 py-6 shadow-[0_24px_90px_rgba(0,0,0,0.55)] sm:px-6 lg:px-8"
         >
