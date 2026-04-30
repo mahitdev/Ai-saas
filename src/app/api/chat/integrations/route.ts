@@ -12,7 +12,7 @@ const integrationSchema = z.object({
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorized();
-  return NextResponse.json({ integrations: listIntegrations(user.id) });
+  return NextResponse.json({ integrations: await listIntegrations(user.id) });
 }
 
 export async function POST(request: Request) {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({
-    integration: addIntegration(user.id, parsed.data.provider, parsed.data.target),
+    integration: await addIntegration(user.id, parsed.data.provider, parsed.data.target),
     note: "Integration connected for workflow notifications.",
   });
 }

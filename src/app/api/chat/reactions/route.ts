@@ -12,7 +12,7 @@ const reactionSchema = z.object({
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorized();
-  return NextResponse.json({ reactions: listReactions(user.id) });
+  return NextResponse.json({ reactions: await listReactions(user.id) });
 }
 
 export async function POST(request: Request) {
@@ -25,5 +25,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid reaction payload" }, { status: 400 });
   }
 
-  return NextResponse.json({ reaction: addReaction(user.id, parsed.data.messageId, parsed.data.emoji) });
+  return NextResponse.json({ reaction: await addReaction(user.id, parsed.data.messageId, parsed.data.emoji) });
 }

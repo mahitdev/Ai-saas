@@ -19,6 +19,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid typing payload" }, { status: 400 });
   }
 
-  const updated = setTyping(user.id, parsed.data.conversationId ?? null, parsed.data.typing);
+  const updated = await setTyping(user.id, parsed.data.conversationId ?? null, parsed.data.typing);
   return NextResponse.json({ typing: updated });
 }

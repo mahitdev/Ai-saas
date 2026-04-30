@@ -16,6 +16,9 @@ const envSchema = z.object({
   AUTH_TWO_FACTOR_ISSUER: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  GITHUB_TOKEN: z.string().optional(),
+  GOOGLE_DRIVE_ACCESS_TOKEN: z.string().optional(),
+  MCP_LOCAL_ROOT: z.string().optional(),
   CRON_SECRET: z.string().optional(),
   VOICE_WEBHOOK_SECRET: z.string().optional(),
 });
@@ -36,6 +39,9 @@ export const env = envSchema.parse({
   AUTH_TWO_FACTOR_ISSUER: process.env.AUTH_TWO_FACTOR_ISSUER,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+  GOOGLE_DRIVE_ACCESS_TOKEN: process.env.GOOGLE_DRIVE_ACCESS_TOKEN,
+  MCP_LOCAL_ROOT: process.env.MCP_LOCAL_ROOT,
   CRON_SECRET: process.env.CRON_SECRET,
   VOICE_WEBHOOK_SECRET: process.env.VOICE_WEBHOOK_SECRET,
 });

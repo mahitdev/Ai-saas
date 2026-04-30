@@ -25,7 +25,7 @@ export async function GET() {
   if (!isAdmin(user.email)) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
-  return NextResponse.json({ auditLogs: listAuditLogs(user.id) });
+  return NextResponse.json({ auditLogs: await listAuditLogs(user.id) });
 }
 
 export async function POST(request: Request) {
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid moderation payload" }, { status: 400 });
   }
 
-  const audit = addAuditLog(user.id, {
+  const audit = await addAuditLog(user.id, {
     action: parsed.data.action,
     targetType: parsed.data.targetType,
     targetId: parsed.data.targetId,

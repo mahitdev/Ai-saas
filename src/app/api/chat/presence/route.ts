@@ -11,7 +11,7 @@ const presenceSchema = z.object({
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorized();
-  return NextResponse.json({ presence: setPresence(user.id, "online") });
+  return NextResponse.json({ presence: await setPresence(user.id, "online") });
 }
 
 export async function POST(request: Request) {
@@ -24,5 +24,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid presence payload" }, { status: 400 });
   }
 
-  return NextResponse.json({ presence: setPresence(user.id, parsed.data.status) });
+  return NextResponse.json({ presence: await setPresence(user.id, parsed.data.status) });
 }

@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
-  addFallbackDesktopAgentSession,
-  getFallbackDesktopAgentSession,
-  updateFallbackDesktopAgentSession,
-} from "@/lib/server/fallback-persistence";
+  addDesktopAgentSession,
+  getDesktopAgentSession,
+  listDesktopAgentSessions,
+  updateDesktopAgentSession,
+} from "@/lib/server/desktop-agent-sessions";
 import { getAuthenticatedUser, unauthorized } from "@/lib/server/session";
 
 const desktopAgentSchema = z.object({
@@ -72,14 +73,22 @@ export async function POST(request: Request) {
   const bridgeToken = `desktop_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
   const instructions = buildInstructions(parsed.data.action, parsed.data.target, parsed.data.goal);
   const safetyNotes = buildSafetyNotes(parsed.data.platform, parsed.data.action);
-  const session = addFallbackDesktopAgentSession(user.id, {
+  const session = await addDesktopAgentSession(user.id, {
     platform: parsed.data.platform,
     goal: parsed.data.goal,
     action: parsed.data.action,
     bridgeToken,
     instructions,
     safetyNotes,
-    status: parsed.data.approved ? "running" : "ready",
+    status: parsed.data.approved ? "pending" : "ready",
+    command: {
+      action: parsed.data.action,
+      target: parsed.data.target,
+      platform: parsed.data.platform,
+      goal: parsed.data.goal,
+    },
+    result: null,
+    error: null,
   });
 
   return NextResponse.json({
@@ -91,11 +100,12 @@ export async function POST(request: Request) {
     action: session.action,
     instructions: session.instructions,
     safetyNotes: session.safetyNotes,
+    command: session.command,
     approved: parsed.data.approved,
     note:
-      parsed.data.platform === "browser"
-        ? "Desktop bridge preview generated. Install a companion app for direct OS control."
-        : "Desktop bridge runbook generated. Use a local companion app to execute the actions.",
+      parsed.data.approved
+        ? "Desktop command queued for a local companion. Poll this endpoint with the sessionId and PATCH the result when complete."
+        : "Desktop command prepared. Approve it to queue execution for a local companion.",
   });
 }
 
@@ -106,14 +116,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const sessionId = url.searchParams.get("sessionId");
   if (sessionId) {
-    const session = getFallbackDesktopAgentSession(user.id, sessionId);
+    const session = await getDesktopAgentSession(user.id, sessionId);
     if (!session) {
       return NextResponse.json({ error: "Desktop agent session not found" }, { status: 404 });
     }
     return NextResponse.json(session);
   }
 
-  return NextResponse.json({ sessions: [] });
+  return NextResponse.json({ sessions: await listDesktopAgentSessions(user.id) });
 }
 
 export async function PATCH(request: Request) {
@@ -124,13 +134,19 @@ export async function PATCH(request: Request) {
   const schema = z.object({
     sessionId: z.string().trim().min(1),
     status: z.enum(["pending", "ready", "running", "complete"]),
+    result: z.string().trim().max(4000).optional(),
+    error: z.string().trim().max(1000).optional(),
   });
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid desktop agent update payload" }, { status: 400 });
   }
 
-  const session = updateFallbackDesktopAgentSession(user.id, parsed.data.sessionId, { status: parsed.data.status });
+  const session = await updateDesktopAgentSession(user.id, parsed.data.sessionId, {
+    status: parsed.data.status,
+    ...(parsed.data.result !== undefined ? { result: parsed.data.result } : {}),
+    ...(parsed.data.error !== undefined ? { error: parsed.data.error } : {}),
+  });
   if (!session) {
     return NextResponse.json({ error: "Desktop agent session not found" }, { status: 404 });
   }

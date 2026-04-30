@@ -472,3 +472,207 @@ export const promptTemplateVote = pgTable(
     index("prompt_template_vote_templateId_idx").on(table.templateId),
   ],
 );
+
+export const chatPresence = pgTable(
+  "chat_presence",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => user.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("online"),
+    lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+    typingConversationId: text("typing_conversation_id"),
+    typing: boolean("typing").notNull().default(false),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("chat_presence_status_idx").on(table.status)],
+);
+
+export const chatReceipt = pgTable(
+  "chat_receipt",
+  {
+    messageId: text("message_id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    sentAt: timestamp("sent_at").defaultNow().notNull(),
+    deliveredAt: timestamp("delivered_at"),
+    readAt: timestamp("read_at"),
+  },
+  (table) => [index("chat_receipt_userId_idx").on(table.userId)],
+);
+
+export const chatNotification = pgTable(
+  "chat_notification",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    conversationId: text("conversation_id"),
+    messageId: text("message_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    readAt: timestamp("read_at"),
+  },
+  (table) => [index("chat_notification_userId_idx").on(table.userId)],
+);
+
+export const chatUpload = pgTable(
+  "chat_upload",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+    previewUrl: text("preview_url").notNull(),
+    shareUrl: text("share_url").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("chat_upload_userId_idx").on(table.userId)],
+);
+
+export const chatAuditLog = pgTable(
+  "chat_audit_log",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    detail: text("detail").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("chat_audit_log_userId_idx").on(table.userId)],
+);
+
+export const chatReaction = pgTable(
+  "chat_reaction",
+  {
+    id: text("id").primaryKey(),
+    messageId: text("message_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    emoji: text("emoji").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("chat_reaction_userId_idx").on(table.userId),
+    index("chat_reaction_messageId_idx").on(table.messageId),
+  ],
+);
+
+export const chatThreadReply = pgTable(
+  "chat_thread_reply",
+  {
+    id: text("id").primaryKey(),
+    messageId: text("message_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("chat_thread_reply_userId_idx").on(table.userId),
+    index("chat_thread_reply_messageId_idx").on(table.messageId),
+  ],
+);
+
+export const chatIntegrationLink = pgTable(
+  "chat_integration_link",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    target: text("target").notNull(),
+    status: text("status").notNull().default("connected"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("chat_integration_link_userId_idx").on(table.userId)],
+);
+
+export const chatCallSession = pgTable(
+  "chat_call_session",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    roomName: text("room_name").notNull(),
+    mode: text("mode").notNull(),
+    status: text("status").notNull(),
+    screenSharing: boolean("screen_sharing").notNull().default(false),
+    recording: boolean("recording").notNull().default(false),
+    participants: text("participants").notNull().default("[]"),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("chat_call_session_userId_idx").on(table.userId)],
+);
+
+export const mcpContext = pgTable(
+  "mcp_context",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    source: text("source").notNull(),
+    target: text("target").notNull(),
+    secureSessionToken: text("secure_session_token").notNull(),
+    capabilities: text("capabilities").notNull().default("[]"),
+    discoveredResources: text("discovered_resources").notNull().default("[]"),
+    contextSummary: text("context_summary").notNull(),
+    liveSignals: text("live_signals").notNull().default("[]"),
+    connectedAt: timestamp("connected_at").defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at").defaultNow().notNull(),
+  },
+  (table) => [index("mcp_context_userId_idx").on(table.userId)],
+);
+
+export const desktopAgentSession = pgTable(
+  "desktop_agent_session",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    platform: text("platform").notNull(),
+    goal: text("goal").notNull(),
+    action: text("action").notNull(),
+    bridgeToken: text("bridge_token").notNull(),
+    instructions: text("instructions").notNull().default("[]"),
+    safetyNotes: text("safety_notes").notNull().default("[]"),
+    command: text("command").notNull().default("{}"),
+    result: text("result"),
+    error: text("error"),
+    status: text("status").notNull().default("ready"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("desktop_agent_session_userId_idx").on(table.userId)],
+);

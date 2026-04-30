@@ -16,7 +16,7 @@ const callSchema = z.object({
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorized();
-  return NextResponse.json({ calls: listCallSessions(user.id) });
+  return NextResponse.json({ calls: await listCallSessions(user.id) });
 }
 
 export async function POST(request: Request) {
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({
-    call: createCallSession(user.id, {
+    call: await createCallSession(user.id, {
       roomName: parsed.data.roomName,
       mode: parsed.data.mode,
       status: parsed.data.status,
@@ -58,7 +58,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid call update payload" }, { status: 400 });
   }
 
-  const call = updateCallSession(user.id, parsed.data.callId, {
+  const call = await updateCallSession(user.id, parsed.data.callId, {
     status: parsed.data.status,
     screenSharing: parsed.data.screenSharing,
     recording: parsed.data.recording,

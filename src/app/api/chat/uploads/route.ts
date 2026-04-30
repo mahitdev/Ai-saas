@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid upload payload" }, { status: 400 });
   }
 
-  const upload = addUpload(user.id, {
+  const upload = await addUpload(user.id, {
     ...parsed.data,
     shareUrl: `/api/chat/uploads/${crypto.randomUUID()}`,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
@@ -30,6 +30,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     upload,
     shareableLink: upload.shareUrl,
-    note: "Upload staged for chat sharing. Wire this to Vercel Blob or S3 for durable storage.",
+    note: "Upload metadata is stored for realtime chat sharing. Use Vercel Blob or S3 for durable file bytes.",
   });
 }

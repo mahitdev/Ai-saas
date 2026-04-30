@@ -82,7 +82,7 @@ export async function POST(request: Request) {
           .join("\n\n"),
       })
       .returning();
-    const userReceipt = markMessageSent(userMessage.id, user.id);
+    const userReceipt = await markMessageSent(userMessage.id, user.id);
 
     const aiResult = await generateAssistantReply({
       userId: user.id,
@@ -102,10 +102,10 @@ export async function POST(request: Request) {
         content: aiResult.reply,
       })
       .returning();
-    const assistantReceipt = markMessageSent(assistantMessage.id, user.id);
-    markMessageRead(userMessage.id, user.id);
-    markMessageRead(assistantMessage.id, user.id);
-    setPresence(user.id, "online", conversationId, false);
+    const assistantReceipt = await markMessageSent(assistantMessage.id, user.id);
+    await markMessageRead(userMessage.id, user.id);
+    await markMessageRead(assistantMessage.id, user.id);
+    await setPresence(user.id, "online", conversationId, false);
 
     await db
       .update(aiConversation)
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
     const mentions = /@[\w.-]+/.test(parsed.data.message);
     const deadline = /\b(deadline|due|tomorrow|today|urgent)\b/i.test(parsed.data.message);
     if (mentions || deadline) {
-      addNotification(user.id, {
+      await addNotification(user.id, {
         kind: mentions ? "mention" : "deadline",
         title: mentions ? "Mention detected" : "Deadline reminder",
         body: mentions
@@ -147,14 +147,14 @@ export async function POST(request: Request) {
       });
     }
     if (/ignore previous|system prompt|jailbreak|bypass|override rules/i.test(parsed.data.message)) {
-      addNotification(user.id, {
+      await addNotification(user.id, {
         kind: "security",
         title: "Prompt injection warning",
         body: "The latest message matched a high-risk safety pattern and was flagged for review.",
         conversationId,
         messageId: userMessage.id,
       });
-      addAuditLog(user.id, {
+      await addAuditLog(user.id, {
         action: "flag_message",
         targetType: "message",
         targetId: userMessage.id,

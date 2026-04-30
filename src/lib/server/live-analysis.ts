@@ -2,7 +2,7 @@ import { and, count, desc, eq, gte, ne } from "drizzle-orm";
 
 import { db } from "@/db";
 import { aiConversation, aiMessage, project, projectTask } from "@/db/schema";
-import { getFallbackMcpContext } from "@/lib/server/fallback-persistence";
+import { getMcpContext } from "@/lib/server/mcp-context";
 
 const injectionPatterns = /(ignore previous|system prompt|jailbreak|bypass|developer mode|act as|override rules)/i;
 
@@ -107,7 +107,7 @@ export async function getLiveAnalysis(userId: string): Promise<LiveAnalysisSnaps
     const promptInjectionAlerts = messageRows.filter(
       (message) => message.role === "user" && injectionPatterns.test(message.content),
     ).length;
-    const mcpContext = getFallbackMcpContext(userId);
+    const mcpContext = await getMcpContext(userId);
 
     const highlights = [
       tasksOpen > 0 ? `${tasksOpen} open tasks` : "No open tasks",

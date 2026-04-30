@@ -16,7 +16,7 @@ export async function GET() {
     db.select({ value: count() }).from(projectTask).where(eq(projectTask.ownerId, user.id)),
   ]);
 
-  const activePresence = getPresence(user.id);
+  const activePresence = await getPresence(user.id);
   const latencyMs = 220 + (activePresence?.typing ? 90 : 0);
   const sentimentScore = Math.max(40, Math.min(98, 72 + Number(messageCountRow[0]?.value ?? 0) * 2 - Number(taskCountRow[0]?.value ?? 0)));
   const churnRisk = Math.max(8, Math.min(92, 62 - Number(messageCountRow[0]?.value ?? 0) * 2 + Number(taskCountRow[0]?.value ?? 0) * 3));

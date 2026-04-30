@@ -36,13 +36,18 @@ export async function GET(_: Request, context: RouteContext) {
       .where(and(eq(aiMessage.conversationId, conversationId), eq(aiMessage.userId, user.id)))
       .orderBy(asc(aiMessage.createdAt));
 
+    const [reactions, threadReplies] = await Promise.all([
+      listReactions(user.id),
+      listThreadReplies(user.id),
+    ]);
+
     return NextResponse.json({
-      messages: messages.map((message) => ({
+      messages: await Promise.all(messages.map(async (message) => ({
         ...message,
-        receipt: getReceipt(message.id),
-        reactions: listReactions(user.id).filter((reaction) => reaction.messageId === message.id),
-        threadReplies: listThreadReplies(user.id).filter((reply) => reply.messageId === message.id),
-      })),
+        receipt: await getReceipt(message.id),
+        reactions: reactions.filter((reaction) => reaction.messageId === message.id),
+        threadReplies: threadReplies.filter((reply) => reply.messageId === message.id),
+      }))),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected server error";

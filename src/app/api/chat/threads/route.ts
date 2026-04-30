@@ -12,7 +12,7 @@ const threadSchema = z.object({
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorized();
-  return NextResponse.json({ replies: listThreadReplies(user.id) });
+  return NextResponse.json({ replies: await listThreadReplies(user.id) });
 }
 
 export async function POST(request: Request) {
@@ -25,5 +25,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid thread payload" }, { status: 400 });
   }
 
-  return NextResponse.json({ reply: addThreadReply(user.id, parsed.data.messageId, parsed.data.content) });
+  return NextResponse.json({ reply: await addThreadReply(user.id, parsed.data.messageId, parsed.data.content) });
 }

@@ -14,22 +14,26 @@ export async function GET(request: Request) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      controller.enqueue(encoder.encode(encodeEvent({ type: "snapshot", ...getChatRealtimeSnapshot(user.id), generatedAt: new Date().toISOString() })));
+      getChatRealtimeSnapshot(user.id).then((snapshot) => {
+        controller.enqueue(encoder.encode(encodeEvent({ type: "snapshot", ...snapshot, generatedAt: new Date().toISOString() })));
+      });
 
       const listener = (event: unknown) => {
         controller.enqueue(encoder.encode(encodeEvent(event)));
       };
       const unsubscribe = registerRealtimeListener(user.id, listener);
       const interval = setInterval(() => {
-        controller.enqueue(
-          encoder.encode(
-            encodeEvent({
-              type: "snapshot",
-              ...getChatRealtimeSnapshot(user.id),
-              generatedAt: new Date().toISOString(),
-            }),
-          ),
-        );
+        getChatRealtimeSnapshot(user.id).then((snapshot) => {
+          controller.enqueue(
+            encoder.encode(
+              encodeEvent({
+                type: "snapshot",
+                ...snapshot,
+                generatedAt: new Date().toISOString(),
+              }),
+            ),
+          );
+        });
       }, 5000);
 
       request.signal.addEventListener(
