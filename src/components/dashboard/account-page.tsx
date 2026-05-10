@@ -45,6 +45,15 @@ type SessionItem = {
   updatedAt: string;
 };
 
+type PasskeyAdd = (input: {
+  name: string;
+  useAutoRegister: boolean;
+}) => Promise<{ error?: { message?: string } | null } | undefined>;
+type PasskeySignIn = (input: {
+  autoFill: boolean;
+  email?: string;
+}) => Promise<{ error?: { message?: string } | null } | undefined>;
+
 const SOCIAL_PROVIDERS = [
   { id: "google", label: "Google" },
   { id: "github", label: "GitHub" },
@@ -216,7 +225,8 @@ export function AccountPage() {
   }
 
   async function createPasskey() {
-    const response = await authClient.passkey.addPasskey({
+    const addPasskey = (authClient as unknown as { passkey: { addPasskey: PasskeyAdd } }).passkey.addPasskey;
+    const response = await addPasskey({
       name: passkeyLabel,
       useAutoRegister: true,
     });
@@ -228,7 +238,8 @@ export function AccountPage() {
   }
 
   async function signInWithPasskey() {
-    const response = await authClient.signIn.passkey({ autoFill: true, email: profile?.email });
+    const passkeySignIn = (authClient.signIn as unknown as { passkey: PasskeySignIn }).passkey;
+    const response = await passkeySignIn({ autoFill: true, email: profile?.email });
     if (response?.error) {
       toast.error(response.error.message ?? "Unable to use passkey.");
       return;

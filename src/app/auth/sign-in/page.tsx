@@ -1,11 +1,13 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { Eye, EyeOff, Fingerprint, Github, KeyRound, Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { authClient } from "@/lib/auth.client";
 import { Button } from "@/components/ui/button";
@@ -22,18 +24,83 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 
+const RESEND_COOLDOWN_SECONDS = 60;
+
+const signInSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
+
+type SignInValues = z.infer<typeof signInSchema>;
+type SocialProvider = "google" | "github" | "microsoft";
+type AuthStep = "credentials" | "two-factor";
+
+type AuthResponse = {
+  data?: { twoFactorRedirect?: boolean; url?: string } | null;
+  error?: { message?: string } | null;
+};
+type PasskeySignIn = (input: {
+  autoFill: boolean;
+  email?: string;
+}) => Promise<{ error?: { message?: string } | null } | undefined>;
+
+const SOCIAL_PROVIDERS: { id: SocialProvider; label: string }[] = [
+  { id: "google", label: "Continue with Google" },
+  { id: "github", label: "Continue with GitHub" },
+  { id: "microsoft", label: "Continue with Microsoft" },
+];
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
+};
+
+const getResetRedirectTo = () => {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) {
+    return "/auth/reset-password";
+  }
+  return new URL("/auth/reset-password", appUrl).toString();
+};
+
 const Page = () => {
   const router = useRouter();
   const { data: session, isPending: isSessionPending } = authClient.useSession();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+    watch,
+  } = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    mode: "onTouched",
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const email = watch("email");
+  const password = watch("password");
+
+  const [authStep, setAuthStep] = useState<AuthStep>("credentials");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [backupCode, setBackupCode] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSignInLoading, setIsSignInLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
+  const [isTwoFactorLoading, setIsTwoFactorLoading] = useState(false);
+  const [isBackupCodeLoading, setIsBackupCodeLoading] = useState(false);
+  const [isVerificationEmailLoading, setIsVerificationEmailLoading] = useState(false);
+  const [isPasswordResetLoading, setIsPasswordResetLoading] = useState(false);
+  const [verificationCooldown, setVerificationCooldown] = useState(0);
+  const [passwordResetCooldown, setPasswordResetCooldown] = useState(0);
 
   const passwordScore = [
     password.length >= 8,
@@ -52,112 +119,196 @@ const Page = () => {
         ? "text-amber-600"
         : "text-emerald-600";
 
+  const emailErrorId = errors.email ? "sign-in-email-error" : undefined;
+  const passwordRegistration = register("password");
+  const passwordErrorId = useMemo(() => {
+    const ids = [];
+    if (errors.password) ids.push("sign-in-password-error");
+    if (capsLockOn) ids.push("sign-in-password-caps");
+    return ids.length > 0 ? ids.join(" ") : undefined;
+  }, [capsLockOn, errors.password]);
+
   useEffect(() => {
     if (session) {
       router.replace("/dashboard");
     }
   }, [router, session]);
 
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsLoading(true);
+  useEffect(() => {
+    if (verificationCooldown <= 0 && passwordResetCooldown <= 0) {
+      return;
+    }
 
-    await authClient.signIn.email(
-      {
-        email,
-        password,
+    const timer = window.setInterval(() => {
+      setVerificationCooldown((value) => Math.max(0, value - 1));
+      setPasswordResetCooldown((value) => Math.max(0, value - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [passwordResetCooldown, verificationCooldown]);
+
+  const onSubmit = handleSubmit(async (values) => {
+    setIsSignInLoading(true);
+
+    try {
+      const response = (await authClient.signIn.email({
+        email: values.email,
+        password: values.password,
         callbackURL: "/dashboard",
-      },
-      {
-        onSuccess: () => {
-          toast.success("Signed in successfully.");
-          router.push("/dashboard");
-        },
-        onError: (ctx) => {
-          toast.error(ctx.error.message || "Unable to sign in.");
-        },
+      })) as AuthResponse;
+
+      if (response?.data?.twoFactorRedirect) {
+        setAuthStep("two-factor");
+        toast.message("Enter your two-factor code to finish signing in.");
+        return;
       }
-    );
 
-    setIsLoading(false);
-  };
+      if (response?.error) {
+        toast.error(response.error.message || "Unable to sign in.");
+        return;
+      }
 
-  async function signInWithSocial(provider: "google" | "github" | "microsoft") {
-    const response = await authClient.$fetch("/sign-in/social", {
-      method: "POST",
-      body: {
-        provider,
-        callbackURL: "/dashboard",
-        requestSignUp: true,
-        disableRedirect: true,
-      },
-    });
-    const payload = (response as { url?: string; redirect?: boolean }) ?? {};
-    if (payload.url) {
-      window.location.assign(payload.url);
+      toast.success("Signed in successfully.");
+      router.push("/dashboard");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Unable to sign in."));
+    } finally {
+      setIsSignInLoading(false);
+    }
+  });
+
+  async function signInWithSocial(provider: SocialProvider) {
+    setSocialLoading(provider);
+
+    try {
+      const response = await authClient.$fetch("/sign-in/social", {
+        method: "POST",
+        body: {
+          provider,
+          callbackURL: "/dashboard",
+          requestSignUp: true,
+          disableRedirect: true,
+        },
+      });
+      const payload = (response as { url?: string; redirect?: boolean }) ?? {};
+      if (payload.url) {
+        window.location.assign(payload.url);
+        return;
+      }
+      toast.success("Social sign-in started.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Unable to start social sign-in."));
+    } finally {
+      setSocialLoading(null);
     }
   }
 
   async function signInWithPasskey() {
-    const response = await authClient.signIn.passkey({ autoFill: true, email });
-    if (response?.error) {
-      toast.error(response.error.message || "Unable to use passkey.");
-      return;
+    setIsPasskeyLoading(true);
+
+    try {
+      const passkeySignIn = (authClient.signIn as unknown as { passkey: PasskeySignIn }).passkey;
+      const response = await passkeySignIn({ autoFill: true, email });
+      if (response?.error) {
+        toast.error(response.error.message || "Unable to use passkey.");
+        return;
+      }
+      toast.success("Passkey prompt opened.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Unable to use passkey."));
+    } finally {
+      setIsPasskeyLoading(false);
     }
-    toast.success("Passkey prompt opened.");
   }
 
   async function sendVerificationEmail() {
-    const response = await fetch("/api/auth/send-verification-email", { method: "POST" });
-    if (response.ok) {
-      toast.success("Verification email sent.");
-      return;
+    if (verificationCooldown > 0) return;
+    setIsVerificationEmailLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/send-verification-email", { method: "POST" });
+      if (response.ok) {
+        toast.success("Verification email sent.");
+        setVerificationCooldown(RESEND_COOLDOWN_SECONDS);
+        return;
+      }
+      toast.error("Unable to resend verification email.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Unable to resend verification email."));
+    } finally {
+      setIsVerificationEmailLoading(false);
     }
-    toast.error("Unable to resend verification email.");
   }
 
   async function requestPasswordReset() {
-    if (!email.trim()) return;
-    const response = await fetch("/api/auth/forget-password", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, redirectTo: `${window.location.origin}/auth/reset-password` }),
-    });
-    if (response.ok) {
-      toast.success("Password reset email sent.");
-      return;
+    if (!email.trim() || passwordResetCooldown > 0) return;
+    setIsPasswordResetLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/forget-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), redirectTo: getResetRedirectTo() }),
+      });
+      if (response.ok) {
+        toast.success("Password reset email sent.");
+        setPasswordResetCooldown(RESEND_COOLDOWN_SECONDS);
+        return;
+      }
+      toast.error("Unable to request reset.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Unable to request reset."));
+    } finally {
+      setIsPasswordResetLoading(false);
     }
-    toast.error("Unable to request reset.");
   }
 
   async function verifyTwoFactor() {
     if (!twoFactorCode.trim()) return;
-    const response = await fetch("/api/auth/two-factor/verify-otp", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ code: twoFactorCode.trim(), trustDevice: rememberMe }),
-    });
-    if (response.ok) {
+    setIsTwoFactorLoading(true);
+
+    try {
+      const response = (await authClient.$fetch("/two-factor/verify-otp", {
+        method: "POST",
+        body: { code: twoFactorCode.trim(), trustDevice: rememberMe },
+      })) as AuthResponse;
+
+      if (response?.error) {
+        toast.error(response.error.message || "Invalid two-factor code.");
+        return;
+      }
+
       toast.success("Two-factor verified.");
       router.push("/dashboard");
-      return;
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Invalid two-factor code."));
+    } finally {
+      setIsTwoFactorLoading(false);
     }
-    toast.error("Invalid two-factor code.");
   }
 
   async function verifyBackupCode() {
     if (!backupCode.trim()) return;
-    const response = await fetch("/api/auth/two-factor/verify-backup-code", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ code: backupCode.trim(), trustDevice: rememberMe }),
-    });
-    if (response.ok) {
+    setIsBackupCodeLoading(true);
+
+    try {
+      const response = (await authClient.$fetch("/two-factor/verify-backup-code", {
+        method: "POST",
+        body: { code: backupCode.trim(), trustDevice: rememberMe },
+      })) as AuthResponse;
+
+      if (response?.error) {
+        toast.error(response.error.message || "Invalid backup code.");
+        return;
+      }
+
       toast.success("Backup code accepted.");
       router.push("/dashboard");
-      return;
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Invalid backup code."));
+    } finally {
+      setIsBackupCodeLoading(false);
     }
-    toast.error("Invalid backup code.");
   }
 
   if (isSessionPending) {
@@ -185,165 +336,240 @@ const Page = () => {
           Secure sign in
         </div>
         <div className="space-y-2">
-          <CardTitle className="text-2xl tracking-tight text-white">Welcome back</CardTitle>
+          <CardTitle className="text-2xl tracking-tight text-white">
+            {authStep === "two-factor" ? "Verify it is you" : "Welcome back"}
+          </CardTitle>
           <CardDescription className="text-zinc-400">
-            Sign in to continue chats, memory, tasks, and voice workflows.
+            {authStep === "two-factor"
+              ? "Enter your authenticator code or use a backup code to finish signing in."
+              : "Sign in to continue chats, memory, tasks, and voice workflows."}
           </CardDescription>
         </div>
       </CardHeader>
 
       <CardContent>
-        <form className="space-y-5 pt-6" onSubmit={onSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="sign-in-email" className="text-zinc-200">Email</Label>
-            <Input
-              id="sign-in-email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="border-white/10 bg-white/5 text-white placeholder:text-zinc-500 focus-visible:border-white/20 focus-visible:ring-0"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="sign-in-password" className="text-zinc-200">Password</Label>
-            <div className="relative">
+        {authStep === "two-factor" ? (
+          <div className="space-y-5 pt-6">
+            <div className="space-y-2">
+              <Label htmlFor="sign-in-2fa" className="text-zinc-200">Authenticator code</Label>
               <Input
-                id="sign-in-password"
-                type={showPassword ? "text" : "password"}
-                placeholder="********"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                onKeyUp={(event) => {
-                  setCapsLockOn(event.getModifierState("CapsLock"));
-                }}
-                className="pr-12 border-white/10 bg-white/5 text-white placeholder:text-zinc-500 focus-visible:border-white/20 focus-visible:ring-0"
-                required
-                minLength={8}
+                id="sign-in-2fa"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="123456"
+                value={twoFactorCode}
+                onChange={(event) => setTwoFactorCode(event.target.value)}
+                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-500 focus-visible:border-white/20 focus-visible:ring-0"
               />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition-colors hover:text-white"
-                onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-zinc-400">Password strength</span>
-                <span className={passwordStrengthColor}>{passwordStrengthLabel}</span>
-              </div>
-              <Progress value={passwordStrength} />
-            </div>
-            {capsLockOn ? (
-              <p className="text-xs text-amber-300">Caps Lock appears to be on.</p>
-            ) : null}
-          </div>
 
-          <details className="rounded-xl border border-white/10 bg-white/5 p-3">
-            <summary className="cursor-pointer list-none text-sm font-medium text-zinc-200">
-              More sign-in options
-            </summary>
-            <div className="mt-4 grid gap-4">
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="sign-in-2fa" className="text-zinc-200">2FA code</Label>
-                  <Input
-                    id="sign-in-2fa"
-                    placeholder="123456"
-                    value={twoFactorCode}
-                    onChange={(event) => setTwoFactorCode(event.target.value)}
-                    className="border-white/10 bg-zinc-950 text-white placeholder:text-zinc-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sign-in-backup" className="text-zinc-200">Backup code</Label>
-                  <Input
-                    id="sign-in-backup"
-                    placeholder="ABCDE-FGHIJ"
-                    value={backupCode}
-                    onChange={(event) => setBackupCode(event.target.value)}
-                    className="border-white/10 bg-zinc-950 text-white placeholder:text-zinc-500"
-                  />
-                </div>
+            <Button
+              type="button"
+              className="w-full bg-white text-zinc-950 shadow-md transition-transform duration-200 hover:scale-[1.01] hover:bg-zinc-100"
+              onClick={verifyTwoFactor}
+              disabled={isTwoFactorLoading || !twoFactorCode.trim()}
+            >
+              {isTwoFactorLoading ? "Verifying..." : "Verify 2FA"}
+            </Button>
+
+            <div className="space-y-2 border-t border-white/10 pt-5">
+              <Label htmlFor="sign-in-backup" className="text-zinc-200">Backup code</Label>
+              <Input
+                id="sign-in-backup"
+                autoComplete="one-time-code"
+                placeholder="ABCDE-FGHIJ"
+                value={backupCode}
+                onChange={(event) => setBackupCode(event.target.value)}
+                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-500 focus-visible:border-white/20 focus-visible:ring-0"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-white/10 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+                onClick={verifyBackupCode}
+                disabled={isBackupCodeLoading || !backupCode.trim()}
+              >
+                {isBackupCodeLoading ? "Checking..." : "Use backup code"}
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex cursor-pointer items-center gap-2 text-muted-foreground">
+                <Checkbox
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                />
+                Remember this device
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto px-0 text-xs text-zinc-400 hover:bg-transparent hover:text-white"
+                onClick={() => setAuthStep("credentials")}
+              >
+                Use another account
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form className="space-y-5 pt-6" onSubmit={onSubmit} noValidate>
+            <div className="space-y-2">
+              <Label htmlFor="sign-in-email" className="text-zinc-200">Email</Label>
+              <Input
+                id="sign-in-email"
+                type="email"
+                placeholder="you@example.com"
+                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-500 focus-visible:border-white/20 focus-visible:ring-0"
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={emailErrorId}
+                {...register("email")}
+              />
+              {errors.email ? (
+                <p id="sign-in-email-error" className="text-xs text-amber-300">
+                  {errors.email.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sign-in-password" className="text-zinc-200">Password</Label>
+              <div className="relative">
+                <Input
+                  id="sign-in-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="********"
+                  className="border-white/10 bg-white/5 pr-12 text-white placeholder:text-zinc-500 focus-visible:border-white/20 focus-visible:ring-0"
+                  aria-invalid={Boolean(errors.password)}
+                  aria-describedby={passwordErrorId}
+                  {...passwordRegistration}
+                  onChange={(event) => {
+                    void passwordRegistration.onChange(event);
+                  }}
+                  onKeyUp={(event) => {
+                    setCapsLockOn(event.getModifierState("CapsLock"));
+                  }}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition-colors hover:text-white"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" className="border-white/10 bg-zinc-950 text-zinc-100 hover:bg-zinc-900" onClick={() => void verifyTwoFactor()}>
-                  Verify 2FA
-                </Button>
-                <Button type="button" variant="outline" className="border-white/10 bg-zinc-950 text-zinc-100 hover:bg-zinc-900" onClick={() => void verifyBackupCode()}>
-                  Use backup code
-                </Button>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-400">Password strength</span>
+                  <span className={passwordStrengthColor}>{passwordStrengthLabel}</span>
+                </div>
+                <Progress value={passwordStrength} />
               </div>
+              {errors.password ? (
+                <p id="sign-in-password-error" className="text-xs text-amber-300">
+                  {errors.password.message}
+                </p>
+              ) : null}
+              {capsLockOn ? (
+                <p id="sign-in-password-caps" className="text-xs text-amber-300">
+                  Caps Lock appears to be on.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
               <div className="grid gap-2 md:grid-cols-3">
-                {(
-                  [
-                    ["google", "Continue with Google"],
-                    ["github", "Continue with GitHub"],
-                    ["microsoft", "Continue with Microsoft"],
-                  ] as const
-                ).map(([provider, label]) => (
+                {SOCIAL_PROVIDERS.map((provider) => (
                   <Button
-                    key={provider}
+                    key={provider.id}
                     type="button"
                     variant="outline"
                     className="justify-between border-white/10 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
-                    onClick={() => void signInWithSocial(provider)}
+                    onClick={() => signInWithSocial(provider.id)}
+                    disabled={socialLoading !== null}
                   >
                     <span className="inline-flex items-center gap-2">
-                      {provider === "github" ? <Github className="size-4" /> : <Mail className="size-4" />}
-                      {label}
+                      {provider.id === "github" ? <Github className="size-4" /> : <Mail className="size-4" />}
+                      {provider.label}
                     </span>
-                    <span className="text-xs text-zinc-400">OAuth</span>
+                    <span className="text-xs text-zinc-400">
+                      {socialLoading === provider.id ? "Opening..." : "OAuth"}
+                    </span>
                   </Button>
                 ))}
               </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                <Button type="button" variant="outline" className="justify-between border-white/10 bg-zinc-950 text-zinc-100 hover:bg-zinc-900" onClick={() => void signInWithPasskey()}>
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="justify-between border-white/10 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+                  onClick={signInWithPasskey}
+                  disabled={isPasskeyLoading}
+                >
                   <span className="inline-flex items-center gap-2">
                     <Fingerprint className="size-4" />
                     Biometric / passkey
                   </span>
-                  <span className="text-xs text-zinc-400">Fast login</span>
+                  <span className="text-xs text-zinc-400">
+                    {isPasskeyLoading ? "Opening..." : "Fast login"}
+                  </span>
                 </Button>
-                <Button type="button" variant="outline" className="justify-between border-white/10 bg-zinc-950 text-zinc-100 hover:bg-zinc-900" onClick={() => void requestPasswordReset()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="justify-between border-white/10 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+                  onClick={requestPasswordReset}
+                  disabled={!email.trim() || isPasswordResetLoading || passwordResetCooldown > 0}
+                >
                   <span className="inline-flex items-center gap-2">
                     <KeyRound className="size-4" />
                     Forgot password
                   </span>
-                  <span className="text-xs text-zinc-400">Reset link</span>
+                  <span className="text-xs text-zinc-400">
+                    {isPasswordResetLoading
+                      ? "Sending..."
+                      : passwordResetCooldown > 0
+                        ? `${passwordResetCooldown}s`
+                        : "Reset link"}
+                  </span>
                 </Button>
               </div>
-              <Button type="button" variant="ghost" className="w-full text-zinc-400 hover:text-white" onClick={() => void sendVerificationEmail()}>
+              <Button
+                type="button"
+                variant="ghost"
+                className="mt-2 w-full text-zinc-400 hover:text-white"
+                onClick={sendVerificationEmail}
+                disabled={isVerificationEmailLoading || verificationCooldown > 0}
+              >
                 <ShieldCheck className="mr-2 size-4" />
-                Resend verification email
+                {isVerificationEmailLoading
+                  ? "Sending verification..."
+                  : verificationCooldown > 0
+                    ? `Resend verification email in ${verificationCooldown}s`
+                    : "Resend verification email"}
               </Button>
             </div>
-          </details>
 
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex cursor-pointer items-center gap-2 text-muted-foreground">
-              <Checkbox
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked === true)}
-              />
-              Remember this device
-            </label>
-            <span className="text-xs text-muted-foreground">Secure, encrypted access</span>
-          </div>
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex cursor-pointer items-center gap-2 text-muted-foreground">
+                <Checkbox
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                />
+                Remember this device
+              </label>
+              <span className="text-xs text-muted-foreground">Secure, encrypted access</span>
+            </div>
 
-          <Button
-            type="submit"
-            className="w-full bg-white text-zinc-950 shadow-md transition-transform duration-200 hover:scale-[1.01] hover:bg-zinc-100"
-            disabled={isLoading}
-          >
-            {isLoading ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
+            <Button
+              type="submit"
+              className="w-full bg-white text-zinc-950 shadow-md transition-transform duration-200 hover:scale-[1.01] hover:bg-zinc-100"
+              disabled={isSignInLoading}
+            >
+              {isSignInLoading ? "Signing in..." : "Sign in"}
+            </Button>
+          </form>
+        )}
       </CardContent>
 
       <CardFooter className="justify-center text-sm">
@@ -370,4 +596,3 @@ const Page = () => {
 };
 
 export default Page;
-
