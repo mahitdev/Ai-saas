@@ -13,6 +13,11 @@ import { ChatInputPanel } from "./chat-input-panel";
 import { ChatSidebar } from "./chat-sidebar";
 import { RealTimeStatusBar } from "./real-time-status-bar";
 import { NotificationCenter } from "./notification-center";
+import {
+  queueChatMessage,
+  readOfflineBootstrap,
+  saveOfflineBootstrap,
+} from "@/lib/offline-store";
 
 type User = {
   id: string;
@@ -41,12 +46,28 @@ type Message = {
   attachments?: Array<{ name: string; mimeType: string; url?: string }>;
   reactions?: Array<{ messageId: string; userId: string; emoji: string; createdAt: string }>;
   threadReplies?: Array<{ id: string; messageId: string; userId: string; content: string; createdAt: string }>;
+  status?: "sending" | "streaming" | "sent" | "queued" | "failed";
+  retryPayload?: {
+    message: string;
+    imageDataUrl?: string;
+    attachments?: Array<{ name: string; mimeType: string; size: number; url?: string }>;
+  };
 };
 
 type ConversationPayload = {
   conversations: Conversation[];
   memory: string;
+  nextCursor?: string | null;
 };
+
+type StreamEvent =
+  | { type: "conversation"; conversation: Conversation }
+  | { type: "user-message"; userMessage: Message; receipt?: Message["receipt"] }
+  | { type: "assistant-start"; assistantMessage: Message }
+  | { type: "assistant-delta"; id: string; delta: string }
+  | { type: "assistant-done"; assistantMessage: Message; receipt?: Message["receipt"] }
+  | { type: "done"; conversationId: string; memorySummary: string }
+  | { type: "error"; error: string };
 
 export function AiChatDashboard({ user }: { user: User }) {
   // Core state
@@ -150,8 +171,24 @@ export function AiChatDashboard({ user }: { user: User }) {
         setConversations(payload.conversations);
         setMemory(payload.memory);
         setActiveConversationId(prev => prev ?? payload.conversations[0]?.id ?? null);
+        const bootstrapResponse = await fetch("/api/offline/bootstrap", { cache: "no-store" });
+        if (bootstrapResponse.ok) {
+          await saveOfflineBootstrap(await bootstrapResponse.json());
+        }
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Unable to fetch conversations");
+        const cached = await readOfflineBootstrap().catch(() => undefined);
+        if (cached) {
+          setConversations(cached.conversations.map((conversation) => ({
+            id: conversation.id,
+            title: conversation.title,
+            createdAt: String(conversation.updatedAt),
+            updatedAt: String(conversation.updatedAt),
+          })));
+          setActiveConversationId(prev => prev ?? cached.conversations[0]?.id ?? null);
+          toast.message("Loaded cached conversations for offline use.");
+        } else {
+          toast.error(error instanceof Error ? error.message : "Unable to fetch conversations");
+        }
       } finally {
         setLoadingConversations(false);
       }
@@ -175,7 +212,19 @@ export function AiChatDashboard({ user }: { user: User }) {
         const payload = await response.json() as { messages: Message[] };
         setMessages(payload.messages);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Unable to fetch messages");
+        const cached = await readOfflineBootstrap().catch(() => undefined);
+        const cachedMessages = cached?.history.find((item) => item.conversationId === activeConversationId)?.messages;
+        if (cachedMessages) {
+          setMessages(cachedMessages.map((message) => ({
+            id: message.id ?? crypto.randomUUID(),
+            role: message.role,
+            content: message.content,
+            createdAt: String(message.createdAt),
+            status: "sent",
+          })));
+        } else {
+          toast.error(error instanceof Error ? error.message : "Unable to fetch messages");
+        }
       } finally {
         setLoadingMessages(false);
       }
@@ -223,6 +272,8 @@ export function AiChatDashboard({ user }: { user: User }) {
     if (!message.trim() || sending) return;
 
     setSending(true);
+    const tempUserId = `temp-user-${crypto.randomUUID()}`;
+    const tempAssistantId = `temp-assistant-${crypto.randomUUID()}`;
 
     try {
       const attachmentsData = pendingPreviews.map((item) => ({
@@ -232,7 +283,40 @@ export function AiChatDashboard({ user }: { user: User }) {
         url: item.previewUrl,
       }));
 
-      const response = await fetch("/api/chat/send", {
+      const optimisticUserMessage: Message = {
+        id: tempUserId,
+        role: "user",
+        content: message,
+        createdAt: new Date().toISOString(),
+        attachments: pendingPreviews.map((item) => ({
+          name: item.name,
+          mimeType: item.mimeType,
+          url: item.previewUrl,
+        })),
+        status: "sending",
+        retryPayload: { message, imageDataUrl, attachments: attachmentsData },
+      };
+
+      setMessages(prev => [...prev, optimisticUserMessage]);
+
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        await queueChatMessage({
+          conversationId: activeConversationId ?? undefined,
+          message,
+          assistant: selectedAssistant,
+          imageDataUrl: imageDataUrl || undefined,
+          attachments: attachmentsData.length ? attachmentsData : undefined,
+        });
+        setMessages(prev =>
+          prev.map((item) => item.id === tempUserId ? { ...item, status: "queued" } : item)
+        );
+        toast.message("You are offline. Message queued and will sync when connection returns.");
+        setPendingFiles([]);
+        setPendingPreviews([]);
+        return;
+      }
+
+      const response = await fetch("/api/chat/send/stream", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -244,65 +328,97 @@ export function AiChatDashboard({ user }: { user: User }) {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to send message");
+      if (!response.ok || !response.body) throw new Error("Failed to send message");
 
-      const payload = await response.json() as {
-        conversationId: string;
-        userMessage: Message;
-        assistantMessage: Message;
-        memorySummary: string;
-        onboardingAha?: string | null;
-        receipts?: {
-          user: { sentAt: string; deliveredAt: string | null; readAt: string | null };
-          assistant: { sentAt: string; deliveredAt: string | null; readAt: string | null };
-        };
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const handleStreamEvent = (event: StreamEvent) => {
+        switch (event.type) {
+          case "conversation":
+            setConversations(prev => [event.conversation, ...prev]);
+            setActiveConversationId(event.conversation.id);
+            break;
+          case "user-message":
+            setMessages(prev =>
+              prev.map((item) =>
+                item.id === tempUserId
+                  ? { ...event.userMessage, attachments: optimisticUserMessage.attachments, receipt: event.receipt, status: "sent" }
+                  : item,
+              ),
+            );
+            break;
+          case "assistant-start":
+            setMessages(prev => [...prev, { ...event.assistantMessage, id: event.assistantMessage.id || tempAssistantId, status: "streaming" }]);
+            break;
+          case "assistant-delta":
+            setMessages(prev =>
+              prev.map((item) =>
+                item.id === event.id ? { ...item, content: `${item.content}${event.delta}`, status: "streaming" } : item,
+              ),
+            );
+            break;
+          case "assistant-done":
+            setMessages(prev =>
+              prev.map((item) =>
+                item.id === event.assistantMessage.id
+                  ? { ...event.assistantMessage, receipt: event.receipt, status: "sent" }
+                  : item,
+              ),
+            );
+            break;
+          case "done":
+            setActiveConversationId(event.conversationId);
+            setMemory(event.memorySummary);
+            break;
+          case "error":
+            throw new Error(event.error);
+        }
       };
 
-      if (!activeConversationId) {
-        // Reload conversations to get the new one
-        const convResponse = await fetch("/api/chat/conversations", { cache: "no-store" });
-        if (convResponse.ok) {
-          const convPayload = await convResponse.json() as ConversationPayload;
-          setConversations(convPayload.conversations);
-          setActiveConversationId(payload.conversationId);
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+        for (const rawEvent of events) {
+          const eventName = rawEvent.match(/^event: (.+)$/m)?.[1];
+          const data = rawEvent.match(/^data: (.+)$/m)?.[1];
+          if (!eventName || !data) continue;
+          handleStreamEvent({ type: eventName, ...JSON.parse(data) } as StreamEvent);
         }
       }
 
-      const attachmentSummary = pendingPreviews.map((item) => ({
-        name: item.name,
-        mimeType: item.mimeType,
-        url: item.previewUrl,
-      }));
-
-      setMessages(prev => [
-        ...prev,
-        { ...payload.userMessage, attachments: attachmentSummary },
-        payload.assistantMessage,
-      ]);
-
-      setMemory(payload.memorySummary);
       setPendingFiles([]);
       setPendingPreviews([]);
-
-      if (payload.onboardingAha) {
-        toast.success(payload.onboardingAha);
-      }
-
-      if (payload.receipts) {
-        setMessages(current =>
-          current.map(message => {
-            if (message.id === payload.userMessage.id && payload.receipts!.user) {
-              return { ...message, receipt: payload.receipts!.user };
-            }
-            if (message.id === payload.assistantMessage.id && payload.receipts!.assistant) {
-              return { ...message, receipt: payload.receipts!.assistant };
-            }
-            return message;
-          })
-        );
-      }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to send message");
+      try {
+        await queueChatMessage({
+          conversationId: activeConversationId ?? undefined,
+          message,
+          assistant: selectedAssistant,
+          imageDataUrl: imageDataUrl || undefined,
+          attachments: pendingPreviews.length
+            ? pendingPreviews.map((item) => ({
+                name: item.name,
+                mimeType: item.mimeType,
+                size: item.size,
+                url: item.previewUrl,
+              }))
+            : undefined,
+        });
+        setMessages(prev =>
+          prev.map((item) => item.id === tempUserId ? { ...item, status: "queued" } : item)
+        );
+        toast.message("Message queued. It will sync when your connection is back.");
+      } catch {
+        setMessages(prev =>
+          prev.map((item) => item.id === tempUserId ? { ...item, status: "failed" } : item)
+        );
+        toast.error(error instanceof Error ? error.message : "Unable to send message");
+      }
     } finally {
       setSending(false);
     }
@@ -498,9 +614,17 @@ export function AiChatDashboard({ user }: { user: User }) {
               currentUserId={user.id}
               isLoading={loadingMessages}
               typingUsers={typingUsers}
-              onMessageReaction={handleMessageReaction}
-              onExplainMessage={handleExplainMessage}
-            />
+            onMessageReaction={handleMessageReaction}
+            onExplainMessage={handleExplainMessage}
+            onRetryMessage={(failedMessage) => {
+              if (failedMessage.retryPayload) {
+                void handleSendMessage(
+                  failedMessage.retryPayload.message,
+                  failedMessage.retryPayload.imageDataUrl,
+                );
+              }
+            }}
+          />
           </div>
 
           {/* Input Panel */}

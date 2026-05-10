@@ -101,6 +101,7 @@ const Page = () => {
   const [isPasswordResetLoading, setIsPasswordResetLoading] = useState(false);
   const [verificationCooldown, setVerificationCooldown] = useState(0);
   const [passwordResetCooldown, setPasswordResetCooldown] = useState(0);
+  const [passkeyAutofillStarted, setPasskeyAutofillStarted] = useState(false);
 
   const passwordScore = [
     password.length >= 8,
@@ -218,6 +219,18 @@ const Page = () => {
       toast.error(getErrorMessage(error, "Unable to use passkey."));
     } finally {
       setIsPasskeyLoading(false);
+    }
+  }
+
+  async function startPasskeyAutofill() {
+    if (passkeyAutofillStarted) return;
+    setPasskeyAutofillStarted(true);
+
+    try {
+      const passkeySignIn = (authClient.signIn as unknown as { passkey: PasskeySignIn }).passkey;
+      await passkeySignIn({ autoFill: true, email });
+    } catch {
+      setPasskeyAutofillStarted(false);
     }
   }
 
@@ -423,6 +436,7 @@ const Page = () => {
                 aria-invalid={Boolean(errors.email)}
                 aria-describedby={emailErrorId}
                 {...register("email")}
+                onFocus={() => void startPasskeyAutofill()}
               />
               {errors.email ? (
                 <p id="sign-in-email-error" className="text-xs text-amber-300">

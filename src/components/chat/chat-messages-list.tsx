@@ -5,7 +5,6 @@ import { Check, CheckCheck, MoreHorizontal } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSkeleton } from "@/components/ui/skeleton";
-import { designTokens } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 
 export interface Message {
@@ -31,6 +29,12 @@ export interface Message {
   attachments?: Array<{ name: string; mimeType: string; url?: string }>;
   reactions?: Array<{ messageId: string; userId: string; emoji: string; createdAt: string }>;
   threadReplies?: Array<{ id: string; messageId: string; userId: string; content: string; createdAt: string }>;
+  status?: "sending" | "streaming" | "sent" | "queued" | "failed";
+  retryPayload?: {
+    message: string;
+    imageDataUrl?: string;
+    attachments?: Array<{ name: string; mimeType: string; size: number; url?: string }>;
+  };
 }
 
 interface ChatMessagesListProps {
@@ -41,21 +45,24 @@ interface ChatMessagesListProps {
   onMessageReaction?: (messageId: string, emoji: string) => void;
   onThreadReply?: (messageId: string) => void;
   onExplainMessage?: (message: Message) => void;
+  onRetryMessage?: (message: Message) => void;
   className?: string;
 }
 
 export function ChatMessagesList({
   messages,
-  currentUserId,
+  currentUserId: _currentUserId,
   isLoading,
   typingUsers = [],
   onMessageReaction,
   onThreadReply,
   onExplainMessage,
+  onRetryMessage,
   className,
 }: ChatMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  void _currentUserId;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -141,7 +148,7 @@ export function ChatMessagesList({
                             : "border-gray-200 bg-gray-50 text-gray-700"
                         )}
                       >
-                        📎 {attachment.name} ({attachment.mimeType})
+                        Attachment: {attachment.name} ({attachment.mimeType})
                       </div>
                     ))}
                   </div>
@@ -194,11 +201,11 @@ export function ChatMessagesList({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-32">
-                          <DropdownMenuItem onClick={() => onMessageReaction(message.id, "👍")}>
-                            👍 Like
+                          <DropdownMenuItem onClick={() => onMessageReaction(message.id, "like")}>
+                            Like
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onMessageReaction(message.id, "🎯")}>
-                            🎯 Insightful
+                          <DropdownMenuItem onClick={() => onMessageReaction(message.id, "insightful")}>
+                            Insightful
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -207,8 +214,31 @@ export function ChatMessagesList({
 
                   {/* Read Receipt */}
                   {message.role === "user" && (
-                    <div className="flex items-center">
-                      {getReceiptIcon(message.receipt)}
+                    <div className="flex items-center gap-2">
+                      {message.status && message.status !== "sent" ? (
+                        <span className={cn("text-xs", message.role === "user" ? "text-blue-100" : "text-gray-500")}>
+                          {message.status === "failed"
+                            ? "Failed"
+                            : message.status === "queued"
+                              ? "Queued"
+                              : message.status === "streaming"
+                                ? "Streaming"
+                                : "Sending"}
+                        </span>
+                      ) : null}
+                      {message.status === "failed" && onRetryMessage ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs text-white hover:bg-white/10 hover:text-white"
+                          onClick={() => onRetryMessage(message)}
+                        >
+                          Retry
+                        </Button>
+                      ) : (
+                        getReceiptIcon(message.receipt)
+                      )}
                     </div>
                   )}
                 </div>

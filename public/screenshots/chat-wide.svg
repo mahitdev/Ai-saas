@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Logicra chat workspace">
+  <rect width="1280" height="720" fill="#020617"/>
+  <rect x="48" y="40" width="288" height="640" rx="22" fill="#0f172a"/>
+  <rect x="372" y="40" width="860" height="640" rx="22" fill="#f8fafc"/>
+  <rect x="404" y="72" width="360" height="28" rx="14" fill="#cbd5e1"/>
+  <rect x="404" y="150" width="420" height="72" rx="18" fill="#ffffff"/>
+  <rect x="690" y="254" width="490" height="72" rx="18" fill="#2563eb"/>
+  <rect x="404" y="360" width="520" height="88" rx="18" fill="#ffffff"/>
+  <rect x="404" y="596" width="796" height="52" rx="18" fill="#e2e8f0"/>
+  <text x="80" y="104" fill="#f8fafc" font-family="Arial, sans-serif" font-size="34" font-weight="700">Logicra</text>
+  <text x="80" y="154" fill="#94a3b8" font-family="Arial, sans-serif" font-size="18">Offline-ready AI workspace</text>
+</svg>
