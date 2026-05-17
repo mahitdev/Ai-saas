@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Check, CheckCheck, MoreHorizontal } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowDown, Check, CheckCheck, MessageSquarePlus, MoreHorizontal } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -46,6 +46,7 @@ interface ChatMessagesListProps {
   onThreadReply?: (messageId: string) => void;
   onExplainMessage?: (message: Message) => void;
   onRetryMessage?: (message: Message) => void;
+  onNewChat?: () => void;
   className?: string;
 }
 
@@ -58,22 +59,56 @@ export function ChatMessagesList({
   onThreadReply,
   onExplainMessage,
   onRetryMessage,
+  onNewChat,
   className,
 }: ChatMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const [scrollState, setScrollState] = useState({
+    canScrollUp: false,
+    canScrollDown: false,
+    isNearBottom: true,
+  });
   void _currentUserId;
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const getViewport = useCallback(() => {
+    return scrollAreaRef.current?.querySelector<HTMLElement>("[data-slot='scroll-area-viewport']") ?? null;
+  }, []);
 
-  // Auto-scroll to bottom when new messages arrive
+  const updateScrollState = useCallback(() => {
+    const viewport = getViewport();
+    if (!viewport) return;
+
+    const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    const isNearBottom = distanceFromBottom < 80;
+    isNearBottomRef.current = isNearBottom;
+    setScrollState({
+      canScrollUp: viewport.scrollTop > 8,
+      canScrollDown: distanceFromBottom > 8,
+      isNearBottom,
+    });
+  }, [getViewport]);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+  }, []);
+
   useEffect(() => {
-    if (messages.length > 0) {
-      scrollToBottom();
+    const viewport = getViewport();
+    if (!viewport) return;
+
+    updateScrollState();
+    viewport.addEventListener("scroll", updateScrollState, { passive: true });
+    return () => viewport.removeEventListener("scroll", updateScrollState);
+  }, [getViewport, updateScrollState]);
+
+  useEffect(() => {
+    if (messages.length > 0 && isNearBottomRef.current) {
+      scrollToBottom("smooth");
     }
-  }, [messages]);
+    requestAnimationFrame(updateScrollState);
+  }, [messages, scrollToBottom, updateScrollState]);
 
   const formatMessageTime = (dateString: string) => {
     return formatDistanceToNow(new Date(dateString), { addSuffix: true });
@@ -83,25 +118,30 @@ export function ChatMessagesList({
     if (!receipt) return null;
 
     if (receipt.readAt) {
-      return <CheckCheck className="h-3.5 w-3.5 text-blue-500" />;
+      return <CheckCheck className="h-3.5 w-3.5 text-cyan-300" />;
     }
     if (receipt.deliveredAt) {
-      return <CheckCheck className="h-3.5 w-3.5 text-gray-400" />;
+      return <CheckCheck className="h-3.5 w-3.5 text-muted-foreground" />;
     }
-    return <Check className="h-3.5 w-3.5 text-gray-400" />;
+    return <Check className="h-3.5 w-3.5 text-muted-foreground" />;
   };
 
   return (
-    <ScrollArea
-      ref={scrollAreaRef}
-      className={cn("flex-1", className)}
-    >
-      <div className="space-y-4 p-4">
+    <div className={cn("panel-surface relative flex min-h-0 flex-1 overflow-hidden", className)}>
+      <div className={cn("scroll-fade-top", scrollState.canScrollUp && "opacity-100")} />
+      <ScrollArea ref={scrollAreaRef} className="flex-1">
+      <div className="min-h-full space-y-4 p-4 md:p-6">
         {messages.length === 0 && !isLoading ? (
-          <div className="flex h-full items-center justify-center text-center text-muted-foreground">
-            <div className="space-y-2">
-              <p className="text-lg font-medium">Start a conversation</p>
-              <p className="text-sm">Send your first message to begin chatting</p>
+          <div className="flex min-h-[min(42rem,60vh)] items-center justify-center text-center text-muted-foreground">
+            <div className="surface-muted max-w-sm rounded-lg p-6">
+              <MessageSquarePlus className="mx-auto mb-3 h-8 w-8 text-foreground" />
+              <p className="text-base font-semibold text-foreground">No messages yet</p>
+              <p className="mt-1 text-sm">Send your first message to begin the thread.</p>
+              {onNewChat && (
+                <Button type="button" className="mt-4" onClick={onNewChat}>
+                  New Chat
+                </Button>
+              )}
             </div>
           </div>
         ) : (
@@ -124,10 +164,10 @@ export function ChatMessagesList({
               {/* Message Content */}
               <div
                 className={cn(
-                  "rounded-2xl px-4 py-3 shadow-sm transition-all duration-200",
+                  "rounded-lg px-4 py-3 transition-all duration-150",
                   message.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-900 hover:shadow-md"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "surface-muted text-foreground"
                 )}
               >
                 {/* Message Text */}
@@ -145,7 +185,7 @@ export function ChatMessagesList({
                           "rounded-lg border px-3 py-2 text-xs",
                           message.role === "user"
                             ? "border-white/20 bg-white/10 text-white"
-                            : "border-gray-200 bg-gray-50 text-gray-700"
+                            : "surface-muted text-muted-foreground"
                         )}
                       >
                         Attachment: {attachment.name} ({attachment.mimeType})
@@ -159,19 +199,19 @@ export function ChatMessagesList({
                   <span
                     className={cn(
                       "text-xs",
-                      message.role === "user" ? "text-blue-100" : "text-gray-500"
+                      message.role === "user" ? "text-primary-foreground/75" : "text-muted-foreground"
                     )}
                   >
                     {formatMessageTime(message.createdAt)}
                   </span>
 
                   {/* Message Actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
                     {message.role === "assistant" && onExplainMessage && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-2 text-xs hover:bg-gray-100"
+                        className="h-6 px-2 text-xs"
                         onClick={() => onExplainMessage(message)}
                       >
                         Why?
@@ -182,7 +222,7 @@ export function ChatMessagesList({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-2 text-xs hover:bg-gray-100"
+                        className="h-6 px-2 text-xs"
                         onClick={() => onThreadReply(message.id)}
                       >
                         Reply
@@ -195,7 +235,7 @@ export function ChatMessagesList({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 hover:bg-gray-100"
+                            className="h-6 w-6 p-0"
                           >
                             <MoreHorizontal className="h-3 w-3" />
                           </Button>
@@ -216,7 +256,7 @@ export function ChatMessagesList({
                   {message.role === "user" && (
                     <div className="flex items-center gap-2">
                       {message.status && message.status !== "sent" ? (
-                        <span className={cn("text-xs", message.role === "user" ? "text-blue-100" : "text-gray-500")}>
+                        <span className={cn("text-xs", message.role === "user" ? "text-primary-foreground/75" : "text-muted-foreground")}>
                           {message.status === "failed"
                             ? "Failed"
                             : message.status === "queued"
@@ -253,7 +293,7 @@ export function ChatMessagesList({
                           "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
                           message.role === "user"
                             ? "border-white/20 bg-white/10 text-white"
-                            : "border-gray-200 bg-gray-50 text-gray-700"
+                            : "surface-muted text-muted-foreground"
                         )}
                       >
                         {reaction.emoji}
@@ -265,7 +305,7 @@ export function ChatMessagesList({
                 {/* Thread Replies */}
                 {message.threadReplies && message.threadReplies.length > 0 && (
                   <div className="mt-3 space-y-2">
-                    <div className="text-xs font-medium text-gray-500">
+                    <div className="text-xs font-medium text-muted-foreground">
                       {message.threadReplies.length} thread {message.threadReplies.length === 1 ? "reply" : "replies"}
                     </div>
                     {message.threadReplies.slice(0, 2).map((reply) => (
@@ -275,7 +315,7 @@ export function ChatMessagesList({
                           "rounded-lg border px-3 py-2 text-xs",
                           message.role === "user"
                             ? "border-white/20 bg-white/10 text-white"
-                            : "border-gray-200 bg-gray-50 text-gray-700"
+                            : "surface-muted text-muted-foreground"
                         )}
                       >
                         {reply.content}
@@ -294,11 +334,11 @@ export function ChatMessagesList({
             <Avatar className="h-6 w-6">
               <AvatarFallback className="text-xs">AI</AvatarFallback>
             </Avatar>
-            <div className="rounded-2xl bg-gray-100 px-4 py-2">
+            <div className="surface-muted rounded-lg px-4 py-2">
               <div className="flex space-x-1">
-                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400"></div>
-                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: "0.1s" }}></div>
-                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: "0.2s" }}></div>
+                <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground"></div>
+                <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: "0.1s" }}></div>
+                <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: "0.2s" }}></div>
               </div>
             </div>
           </div>
@@ -315,6 +355,20 @@ export function ChatMessagesList({
 
         <div ref={messagesEndRef} />
       </div>
-    </ScrollArea>
+      </ScrollArea>
+      <div className={cn("scroll-fade-bottom", scrollState.canScrollDown && "opacity-100")} />
+      {!scrollState.isNearBottom && (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 shadow-lg hover:-translate-x-1/2"
+          onClick={() => scrollToBottom("smooth")}
+        >
+          <ArrowDown className="h-4 w-4" />
+          Jump to latest
+        </Button>
+      )}
+    </div>
   );
 }

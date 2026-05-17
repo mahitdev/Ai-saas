@@ -571,14 +571,15 @@ export function AiChatDashboard({ user }: { user: User }) {
 
   return (
     <ErrorBoundary>
-      <main className="min-h-screen bg-gray-50 p-4 md:p-6">
-        <div className="mx-auto flex h-[calc(100vh-2rem)] max-w-7xl gap-6 md:h-[calc(100vh-3rem)]">
+      <main className="dashboard-surface min-h-screen p-4 text-foreground md:p-6">
+        <div className="mx-auto flex h-[calc(100vh-2rem)] max-w-7xl flex-col gap-4 md:h-[calc(100vh-3rem)] md:gap-6 lg:flex-row">
         {/* Real-time Status Bar */}
-        <div className="mb-4 md:hidden">
+        <div className="md:hidden">
           <RealTimeStatusBar
             status={realtimeStatus}
             error={realtimeError}
             onRetry={reconnect}
+            className="min-h-12"
           />
         </div>
 
@@ -597,39 +598,40 @@ export function AiChatDashboard({ user }: { user: User }) {
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {/* Desktop Status Bar */}
           <div className="hidden md:block">
             <RealTimeStatusBar
               status={realtimeStatus}
               error={realtimeError}
               onRetry={reconnect}
+              className="min-h-12"
             />
           </div>
 
           {/* Messages */}
-          <div className="flex-1">
             <ChatMessagesList
               messages={messages}
               currentUserId={user.id}
               isLoading={loadingMessages}
               typingUsers={typingUsers}
-            onMessageReaction={handleMessageReaction}
-            onExplainMessage={handleExplainMessage}
-            onRetryMessage={(failedMessage) => {
-              if (failedMessage.retryPayload) {
-                void handleSendMessage(
-                  failedMessage.retryPayload.message,
-                  failedMessage.retryPayload.imageDataUrl,
-                );
-              }
-            }}
-          />
-          </div>
+              onMessageReaction={handleMessageReaction}
+              onExplainMessage={handleExplainMessage}
+              onNewChat={handleCreateConversation}
+              onRetryMessage={(failedMessage) => {
+                if (failedMessage.retryPayload) {
+                  void handleSendMessage(
+                    failedMessage.retryPayload.message,
+                    failedMessage.retryPayload.imageDataUrl,
+                  );
+                }
+              }}
+            />
 
           {/* Input Panel */}
           <ChatInputPanel
             onSendMessage={handleSendMessage}
+            onFileSelect={handleFileSelect}
             isSending={sending}
             cameraEnabled={cameraEnabled}
             onCameraToggle={() => cameraEnabled ? stopCamera() : startCamera()}
@@ -639,7 +641,7 @@ export function AiChatDashboard({ user }: { user: User }) {
         </div>
 
         {/* Notification Center */}
-        <div className="fixed bottom-4 right-4 z-50 md:relative md:bottom-auto md:right-auto">
+        <div className="fixed bottom-4 right-4 z-50 md:static">
           <NotificationCenter
             notifications={notifications}
             unreadCount={unreadCount}

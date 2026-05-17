@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { Bell, BellOff, Check, X, AlertTriangle, MessageSquare, CheckCircle, Clock } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, Check, CheckCircle, Clock, MessageSquare, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { NotificationSkeleton } from "@/components/ui/skeleton";
-import { designTokens } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 
 export interface Notification {
@@ -45,34 +43,17 @@ export function NotificationCenter({
   const getNotificationIcon = (kind: Notification["kind"]) => {
     switch (kind) {
       case "message":
-        return <MessageSquare className="h-4 w-4 text-blue-500" />;
+        return <MessageSquare className="h-4 w-4 text-cyan-300" />;
       case "task":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-emerald-300" />;
       case "mention":
-        return <MessageSquare className="h-4 w-4 text-purple-500" />;
+        return <MessageSquare className="h-4 w-4 text-violet-300" />;
       case "deadline":
-        return <Clock className="h-4 w-4 text-orange-500" />;
+        return <Clock className="h-4 w-4 text-amber-300" />;
       case "security":
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
+        return <AlertTriangle className="h-4 w-4 text-destructive" />;
       default:
-        return <Bell className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getNotificationColor = (kind: Notification["kind"]) => {
-    switch (kind) {
-      case "message":
-        return "border-blue-200 bg-blue-50";
-      case "task":
-        return "border-green-200 bg-green-50";
-      case "mention":
-        return "border-purple-200 bg-purple-50";
-      case "deadline":
-        return "border-orange-200 bg-orange-50";
-      case "security":
-        return "border-red-200 bg-red-50";
-      default:
-        return "border-gray-200 bg-gray-50";
+        return <Bell className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -91,7 +72,7 @@ export function NotificationCenter({
           <BellOff className="h-4 w-4" />
         )}
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs text-white">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -102,10 +83,10 @@ export function NotificationCenter({
 
       {/* Notification Panel */}
       {isExpanded && (
-        <div className="absolute right-0 top-12 z-50 w-80 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="panel-surface absolute right-0 top-12 z-50 w-80 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-900">
+          <div className="flex items-center justify-between border-b border-border/60 p-4">
+            <h3 className="text-sm font-semibold text-foreground">
               Notifications {unreadCount > 0 && `(${unreadCount} unread)`}
             </h3>
             <div className="flex items-center gap-2">
@@ -131,17 +112,28 @@ export function NotificationCenter({
           </div>
 
           {/* Notification List */}
+          <div className="relative">
+          <div className="scroll-fade-top opacity-100" />
           <ScrollArea className="max-h-96">
             {notifications.length === 0 ? (
-              <NotificationSkeleton />
+              <div className="p-4">
+                <div className="surface-muted rounded-lg p-5 text-center">
+                  <BellOff className="mx-auto mb-3 h-7 w-7 text-foreground" />
+                  <p className="text-sm font-semibold text-foreground">No notifications</p>
+                  <p className="mt-1 text-xs text-muted-foreground">You are all caught up.</p>
+                  <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => setIsExpanded(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="space-y-2 p-3">
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
                     className={cn(
-                      "p-4 transition-colors hover:bg-gray-50",
-                      !notification.readAt && "bg-blue-50/50"
+                      "interactive-row rounded-lg p-3",
+                      !notification.readAt && "border-primary/30 bg-primary/10"
                     )}
                   >
                     <div className="flex items-start gap-3">
@@ -159,15 +151,15 @@ export function NotificationCenter({
                             }
                             onNotificationClick?.(notification);
                           }}
-                          className="w-full text-left"
+                          className="w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                         >
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="truncate text-sm font-medium text-foreground">
                             {notification.title}
                           </p>
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                             {notification.body}
                           </p>
-                          <p className="text-xs text-gray-500 mt-2">
+                          <p className="mt-2 text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(notification.createdAt), {
                               addSuffix: true,
                             })}
@@ -182,7 +174,7 @@ export function NotificationCenter({
                             variant="ghost"
                             size="sm"
                             onClick={() => onMarkAsRead(notification.id)}
-                            className="h-6 w-6 p-0 text-gray-400 hover:text-green-600"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-emerald-300"
                           >
                             <Check className="h-3 w-3" />
                             <span className="sr-only">Mark as read</span>
@@ -192,7 +184,7 @@ export function NotificationCenter({
                           variant="ghost"
                           size="sm"
                           onClick={() => onDismiss(notification.id)}
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                         >
                           <X className="h-3 w-3" />
                           <span className="sr-only">Dismiss</span>
@@ -202,13 +194,15 @@ export function NotificationCenter({
 
                     {/* Unread Indicator */}
                     {!notification.readAt && (
-                      <div className="mt-2 h-1 w-full rounded-full bg-blue-500" />
+                      <div className="mt-2 h-1 w-full rounded-full bg-primary" />
                     )}
                   </div>
                 ))}
               </div>
             )}
           </ScrollArea>
+          <div className="scroll-fade-bottom opacity-100" />
+          </div>
         </div>
       )}
     </div>

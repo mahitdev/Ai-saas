@@ -1,6 +1,7 @@
 "use client";
 
 import { Wifi, WifiOff, AlertCircle, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "offline";
@@ -19,29 +20,29 @@ export function RealTimeStatusBar({ status, error, onRetry, className }: RealTim
         return {
           icon: Wifi,
           text: "Connecting...",
-          className: "bg-blue-50 text-blue-700 border-blue-200",
-          iconClassName: "text-blue-500",
+          className: "border-primary/20 bg-primary/10 text-foreground",
+          iconClassName: "text-cyan-300",
         };
       case "connected":
         return {
           icon: CheckCircle,
           text: "Connected",
-          className: "bg-green-50 text-green-700 border-green-200",
-          iconClassName: "text-green-500",
+          className: "border-emerald-300/20 bg-emerald-300/10 text-foreground",
+          iconClassName: "text-emerald-300",
         };
       case "reconnecting":
         return {
           icon: AlertCircle,
           text: "Reconnecting...",
-          className: "bg-yellow-50 text-yellow-700 border-yellow-200",
-          iconClassName: "text-yellow-500",
+          className: "border-amber-300/20 bg-amber-300/10 text-foreground",
+          iconClassName: "text-amber-300",
         };
       case "offline":
         return {
           icon: WifiOff,
           text: error || "Offline",
-          className: "bg-red-50 text-red-700 border-red-200",
-          iconClassName: "text-red-500",
+          className: "border-destructive/30 bg-destructive/10 text-foreground",
+          iconClassName: "text-destructive",
         };
     }
   };
@@ -52,7 +53,7 @@ export function RealTimeStatusBar({ status, error, onRetry, className }: RealTim
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-3 py-2 text-sm border rounded-lg transition-all duration-200",
+        "panel-surface flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-all duration-150",
         config.className,
         className
       )}
@@ -60,12 +61,15 @@ export function RealTimeStatusBar({ status, error, onRetry, className }: RealTim
       <Icon className={cn("h-4 w-4 flex-shrink-0", config.iconClassName)} />
       <span className="flex-1 truncate">{config.text}</span>
       {status === "offline" && onRetry && (
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={onRetry}
-          className="text-xs underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
+          className="h-7 px-2 text-xs"
         >
           Retry
-        </button>
+        </Button>
       )}
     </div>
   );

@@ -8,9 +8,9 @@ import {
   Mic,
   MicOff,
   Send,
-  Square,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ export function ChatInputPanel({
 
     try {
       await onSendMessage(messageText);
-    } catch (error) {
+    } catch {
       // Error is handled by parent component
       setInput(messageText); // Restore input on error
     }
@@ -98,23 +98,23 @@ export function ChatInputPanel({
   const canSend = input.trim().length > 0 && !isSending;
 
   return (
-    <div className={cn("border-t border-gray-200 bg-white p-4", className)}>
+    <div className={cn("panel-surface p-4", className)}>
       {/* Pending Files Preview */}
       {pendingFiles.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
           {pendingFiles.map((file, index) => (
             <div
               key={`${file.name}-${index}`}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+              className="surface-muted flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
             >
               <span className="truncate max-w-32">{file.name}</span>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-4 w-4 p-0 text-gray-500 hover:text-red-500"
+                className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
                 onClick={() => onRemoveFile?.(index)}
               >
-                ×
+                <X className="h-3 w-3" />
               </Button>
             </div>
           ))}
@@ -123,13 +123,13 @@ export function ChatInputPanel({
 
       {/* Voice Mode Indicator */}
       {isVoiceMode && isListening && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
           <div className="flex space-x-1">
             <div className="h-2 w-2 animate-pulse rounded-full bg-red-500"></div>
             <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" style={{ animationDelay: "0.2s" }}></div>
             <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" style={{ animationDelay: "0.4s" }}></div>
           </div>
-          <span className="text-sm text-red-700">Listening... Speak now</span>
+          <span className="text-sm text-foreground">Listening... Speak now</span>
         </div>
       )}
 
@@ -154,7 +154,7 @@ export function ChatInputPanel({
             size="icon"
             className={cn(
               "flex-shrink-0",
-              cameraEnabled && "bg-blue-50 border-blue-200 text-blue-600"
+              cameraEnabled && "border-primary/40 bg-primary/10 text-primary"
             )}
             onClick={onCameraToggle}
             disabled={isSending}
@@ -173,7 +173,7 @@ export function ChatInputPanel({
             size="icon"
             className={cn(
               "flex-shrink-0",
-              isListening && "bg-red-50 border-red-200 text-red-600"
+              isListening && "border-destructive/40 bg-destructive/10 text-destructive"
             )}
             onClick={handleVoiceToggle}
             disabled={isSending}
@@ -192,7 +192,7 @@ export function ChatInputPanel({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
-            className="min-h-10 resize-none border-gray-200 focus:border-blue-300"
+            className="min-h-10 resize-none border-border/80 bg-background/70 focus-visible:ring-ring/50"
             disabled={isSending || isVoiceMode}
           />
         </div>
@@ -201,7 +201,7 @@ export function ChatInputPanel({
         <Button
           onClick={handleSend}
           disabled={!canSend}
-          className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+          className="flex-shrink-0 disabled:opacity-50"
           size="icon"
         >
           {isSending ? (
@@ -232,7 +232,7 @@ export function ChatInputPanel({
             onClick={() => setIsVoiceMode(!isVoiceMode)}
             className={cn(
               "text-xs",
-              isVoiceMode ? "text-red-600" : "text-gray-500"
+              isVoiceMode ? "text-destructive" : "text-muted-foreground"
             )}
           >
             {isVoiceMode ? <VolumeX className="mr-1 h-3 w-3" /> : <Volume2 className="mr-1 h-3 w-3" />}
