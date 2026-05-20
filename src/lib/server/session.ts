@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { unauthorized as apiUnauthorized } from "@/lib/server/api-response";
 
 export async function getServerSession() {
   return auth.api.getSession({
@@ -15,5 +15,5 @@ export async function getAuthenticatedUser() {
 }
 
 export function unauthorized() {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return apiUnauthorized();
 }

@@ -22,6 +22,7 @@ export interface UseNotificationsOptions {
 
 export function useNotifications(options: UseNotificationsOptions) {
   const { userId, autoShowToasts = true, onNotification } = options;
+  void userId;
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 

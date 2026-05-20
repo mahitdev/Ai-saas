@@ -3,8 +3,8 @@ import type { BetterAuthClientPlugin } from "better-auth";
 import {
   genericOAuthClient,
   multiSessionClient,
-  passkeyClient,
 } from "better-auth/client/plugins";
+import { passkeyClient } from "@better-auth/passkey/client";
 
 const asClientPlugin = <T>(plugin: T) => plugin as unknown as BetterAuthClientPlugin;
 
