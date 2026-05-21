@@ -42,6 +42,7 @@ export async function GET(request: Request) {
               highlights: ["Streaming snapshot unavailable."],
               mcpContext: null,
               source: "fallback_memory",
+              weekly: { days: ["D1", "D2", "D3", "D4", "D5", "D6", "D7"], messages: [0, 0, 0, 0, 0, 0, 0], tasks: [0, 0, 0, 0, 0, 0, 0], engagement: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5] },
             }),
           ),
         );

@@ -31,8 +31,15 @@ export type LiveAnalysisSnapshot = {
     secureSessionToken: string;
     lastUsedAt: string;
   } | null;
-  source: "database" | "fallback_memory";
-};
+    source: "database" | "fallback_memory";
+    weekly: {
+      days: string[];
+      messages: number[];
+      tasks: number[];
+      engagement: number[];
+    };
+  };
+
 
 export type SystemAgentRun = {
   analysis: LiveAnalysisSnapshot;
@@ -65,6 +72,7 @@ function createFallbackAnalysis(): LiveAnalysisSnapshot {
     highlights: ["No workspace data loaded yet."],
     mcpContext: null,
     source: "fallback_memory",
+    weekly: { days: ["D1", "D2", "D3", "D4", "D5", "D6", "D7"], messages: [0, 0, 0, 0, 0, 0, 0], tasks: [0, 0, 0, 0, 0, 0, 0], engagement: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5] },
   };
 }
 
@@ -108,6 +116,44 @@ export async function getLiveAnalysis(userId: string): Promise<LiveAnalysisSnaps
       (message) => message.role === "user" && injectionPatterns.test(message.content),
     ).length;
     const mcpContext = await getMcpContext(userId);
+
+    const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [weekMessageRows, weekTaskRows] = await Promise.all([
+      db
+        .select({ createdAt: aiMessage.createdAt })
+        .from(aiMessage)
+        .where(and(eq(aiMessage.userId, userId), gte(aiMessage.createdAt, weekStart)))
+        .orderBy(desc(aiMessage.createdAt)),
+      db
+        .select({ updatedAt: projectTask.updatedAt })
+        .from(projectTask)
+        .where(and(eq(projectTask.ownerId, userId), gte(projectTask.updatedAt, weekStart))),
+    ]);
+    const days: string[] = [];
+    const messagesPerDay: number[] = [];
+    const tasksPerDay: number[] = [];
+    const engagement: number[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date();
+      dayStart.setDate(dayStart.getDate() - i);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+      const label = `D${7 - i}`;
+      days.push(label);
+      const dayMsgs = weekMessageRows.filter((m) => {
+        const d = new Date(m.createdAt);
+        return d >= dayStart && d < dayEnd;
+      }).length;
+      messagesPerDay.push(dayMsgs);
+      const dayTasks = weekTaskRows.filter((t) => {
+        const d = new Date(t.updatedAt);
+        return d >= dayStart && d < dayEnd;
+      }).length;
+      tasksPerDay.push(dayTasks);
+      const eng = Math.min(0.95, Math.max(0.1, (dayMsgs + dayTasks * 2) / 20));
+      engagement.push(eng);
+    }
 
     const highlights = [
       tasksOpen > 0 ? `${tasksOpen} open tasks` : "No open tasks",
@@ -164,6 +210,7 @@ export async function getLiveAnalysis(userId: string): Promise<LiveAnalysisSnaps
           }
         : null,
       source: "database",
+      weekly: { days, messages: messagesPerDay, tasks: tasksPerDay, engagement },
     };
   } catch {
     return createFallbackAnalysis();
